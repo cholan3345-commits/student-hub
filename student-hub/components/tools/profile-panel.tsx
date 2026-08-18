@@ -48,7 +48,7 @@ export function ProfilePanel() {
         <Card>
           <CardContent className="flex flex-col items-center pt-6 text-center">
             <div className="relative">
-              <div className="flex size-32 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/15 text-3xl font-semibold text-blue-100 shadow-2xl shadow-blue-950/25">
+              <div className="flex size-32 items-center justify-center overflow-hidden rounded-full border border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)] text-3xl font-semibold text-[var(--hub-text)] shadow-2xl shadow-[var(--hub-accent-glow)]">
                 {profile.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -60,7 +60,7 @@ export function ProfilePanel() {
                   initials
                 )}
               </div>
-              <label className="absolute bottom-0 right-0 flex size-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-[#111827] text-blue-200 shadow-xl shadow-black/30 transition hover:-translate-y-0.5 hover:bg-white/[0.08]">
+              <label className="hub-glass-control absolute bottom-0 right-0 flex size-10 cursor-pointer items-center justify-center rounded-xl text-[var(--hub-accent)] shadow-xl shadow-black/30 transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/[0.08]">
                 <Camera className="size-4" aria-hidden="true" />
                 <span className="sr-only">Upload avatar</span>
                 <input

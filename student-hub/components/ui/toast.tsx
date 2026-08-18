@@ -79,10 +79,10 @@ function ToastItem({ onDismiss, toast }: { onDismiss: () => void; toast: Toast }
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-2xl border bg-[#111827]/95 p-4 text-zinc-100 shadow-2xl shadow-black/30 backdrop-blur animate-in slide-in-from-right-3 fade-in duration-200",
+        "hub-glass-strong flex items-start gap-3 rounded-2xl p-4 text-zinc-100 animate-in slide-in-from-right-3 fade-in duration-200",
         toast.tone === "success" && "border-emerald-400/25",
         toast.tone === "error" && "border-red-400/25",
-        toast.tone === "info" && "border-blue-400/25"
+        toast.tone === "info" && "border-[var(--hub-accent-border)]"
       )}
     >
       <Icon
@@ -90,13 +90,13 @@ function ToastItem({ onDismiss, toast }: { onDismiss: () => void; toast: Toast }
           "mt-0.5 size-5 shrink-0",
           toast.tone === "success" && "text-emerald-300",
           toast.tone === "error" && "text-red-300",
-          toast.tone === "info" && "text-blue-300"
+          toast.tone === "info" && "text-[var(--hub-accent)]"
         )}
         aria-hidden="true"
       />
-      <div className="min-w-0 flex-1">
+      <div className="grid min-w-0 flex-1 gap-1">
         <p className="text-sm font-semibold">{toast.title}</p>
-        <p className="mt-1 text-sm leading-5 text-zinc-400">{toast.message}</p>
+        <p className="text-sm leading-5 text-zinc-400">{toast.message}</p>
       </div>
       <Button
         type="button"
@@ -111,4 +111,3 @@ function ToastItem({ onDismiss, toast }: { onDismiss: () => void; toast: Toast }
     </div>
   )
 }
-

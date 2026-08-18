@@ -8,70 +8,246 @@ import type {
   QuickActionId,
 } from "@/lib/types"
 
-export const DASHBOARD_WIDGET_COPY: Record<
+export type DashboardWidgetConstraints = {
+  maxColSpan: number
+  maxRowSpan: number
+  minColSpan: number
+  minRowSpan: number
+}
+
+function widgetConstraints(
+  minColSpan: number,
+  minRowSpan: number
+): DashboardWidgetConstraints {
+  return {
+    maxColSpan: 16,
+    maxRowSpan: 12,
+    minColSpan,
+    minRowSpan,
+  }
+}
+
+export const WIDGET_SIZE_SPANS: Record<
+  DashboardWidgetSize,
+  { colSpan: number; rowSpan: number }
+> = {
+  custom: { colSpan: 4, rowSpan: 3 },
+  large: { colSpan: 6, rowSpan: 4 },
+  medium: { colSpan: 4, rowSpan: 3 },
+  small: { colSpan: 3, rowSpan: 2 },
+}
+
+export type DashboardWidgetEmphasis = "primary" | "standard" | "quiet"
+
+export type DashboardWidgetSettingDefinition = {
+  defaultValue: string
+  key: keyof DashboardWidgetSettings
+  label: string
+  options: ReadonlyArray<{ label: string; value: string }>
+}
+
+export type DashboardWidgetDefinition = {
+  constraints: DashboardWidgetConstraints
+  defaultSettings: DashboardWidgetSettings
+  defaultSize: DashboardWidgetSize
+  description: string
+  duplicable: boolean
+  emphasis: DashboardWidgetEmphasis
+  setting?: DashboardWidgetSettingDefinition
+  title: string
+}
+
+export const DASHBOARD_WIDGET_DEFINITIONS: Record<
   DashboardWidgetKind,
-  { description: string; title: string }
+  DashboardWidgetDefinition
 > = {
   assignments: {
-    title: "Upcoming Assignments",
+    title: "Assignments",
     description: "Coursework filtered by your widget setting.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { assignmentsView: "upcoming" },
+    defaultSize: "medium",
+    duplicable: true,
+    emphasis: "primary",
+    setting: {
+      key: "assignmentsView",
+      label: "Assignments View",
+      defaultValue: "upcoming",
+      options: [
+        { label: "Upcoming", value: "upcoming" },
+        { label: "Overdue", value: "overdue" },
+        { label: "Completed", value: "completed" },
+      ],
+    },
   },
   calculator: {
     title: "Calculator Preview",
     description: "Recent calculations and quick calculator access.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { calculatorView: "compact" },
+    defaultSize: "medium",
+    duplicable: true,
+    emphasis: "standard",
+    setting: {
+      key: "calculatorView",
+      label: "Calculator View",
+      defaultValue: "compact",
+      options: [
+        { label: "Compact", value: "compact" },
+        { label: "Expanded", value: "expanded" },
+      ],
+    },
   },
   calendar: {
     title: "Calendar Preview",
     description: "Events shown in your preferred calendar view.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { calendarView: "day" },
+    defaultSize: "medium",
+    duplicable: true,
+    emphasis: "standard",
+    setting: {
+      key: "calendarView",
+      label: "Calendar View",
+      defaultValue: "day",
+      options: [
+        { label: "Month", value: "month" },
+        { label: "Week", value: "week" },
+        { label: "Day", value: "day" },
+      ],
+    },
   },
   "classes-today": {
-    title: "Total Classes Today",
+    title: "Classes Today",
     description: "Live class count for the current weekday.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "standard",
   },
   "completed-assignments": {
     title: "Completed Assignments",
     description: "Finished work across your assignment list.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "quiet",
   },
   "current-date": {
     title: "Current Date",
     description: "A live date tile for your workspace.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "quiet",
   },
   "current-time": {
     title: "Current Time",
     description: "A live clock for quick reference.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "quiet",
   },
   notes: {
     title: "Recent Notes",
     description: "Notes filtered by recency or favorites.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { notesView: "recent" },
+    defaultSize: "medium",
+    duplicable: true,
+    emphasis: "standard",
+    setting: {
+      key: "notesView",
+      label: "Notes View",
+      defaultValue: "recent",
+      options: [
+        { label: "Recent", value: "recent" },
+        { label: "Favorites", value: "favorites" },
+      ],
+    },
   },
   "quick-actions": {
     title: "Quick Actions",
     description: "Draggable shortcuts for common student tasks.",
+    constraints: widgetConstraints(3, 2),
+    defaultSettings: {},
+    defaultSize: "medium",
+    duplicable: false,
+    emphasis: "standard",
   },
   "remaining-assignments": {
     title: "Remaining Assignments",
     description: "Active work that still needs attention.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "quiet",
   },
   schedule: {
     title: "Today's Schedule",
     description: "Classes filtered by day or week.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { scheduleView: "today" },
+    defaultSize: "medium",
+    duplicable: true,
+    emphasis: "primary",
+    setting: {
+      key: "scheduleView",
+      label: "Schedule View",
+      defaultValue: "today",
+      options: [
+        { label: "Today", value: "today" },
+        { label: "Tomorrow", value: "tomorrow" },
+        { label: "Week", value: "week" },
+      ],
+    },
   },
   timer: {
-    title: "Current Pomodoro Timer",
+    title: "Study Timer",
     description: "Focused study status and timer controls.",
+    constraints: widgetConstraints(3, 3),
+    defaultSettings: { timerView: "compact" },
+    defaultSize: "medium",
+    duplicable: false,
+    emphasis: "primary",
+    setting: {
+      key: "timerView",
+      label: "Timer View",
+      defaultValue: "compact",
+      options: [
+        { label: "Compact", value: "compact" },
+        { label: "Full", value: "full" },
+      ],
+    },
   },
   "total-assignments": {
     title: "Total Assignments",
     description: "All assignments saved in Student Hub.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "quiet",
   },
   "upcoming-deadlines": {
-    title: "Upcoming Deadlines",
+    title: "Deadlines",
     description: "Active work due in the next seven days.",
+    constraints: widgetConstraints(2, 2),
+    defaultSettings: {},
+    defaultSize: "small",
+    duplicable: false,
+    emphasis: "primary",
   },
 }
 
 export const DASHBOARD_WIDGET_KINDS = Object.keys(
-  DASHBOARD_WIDGET_COPY
+  DASHBOARD_WIDGET_DEFINITIONS
 ) as DashboardWidgetKind[]
 
 export const QUICK_ACTIONS: Array<{
@@ -88,50 +264,6 @@ export const QUICK_ACTIONS: Array<{
 
 export const DEFAULT_QUICK_ACTION_ORDER = QUICK_ACTIONS.map((action) => action.id)
 
-export const WIDGET_SIZE_SPANS: Record<
-  DashboardWidgetSize,
-  { colSpan: number; rowSpan: number }
-> = {
-  custom: { colSpan: 4, rowSpan: 3 },
-  large: { colSpan: 6, rowSpan: 4 },
-  medium: { colSpan: 4, rowSpan: 3 },
-  small: { colSpan: 3, rowSpan: 2 },
-}
-
-const DEFAULT_WIDGET_SETTINGS: Record<DashboardWidgetKind, DashboardWidgetSettings> = {
-  assignments: { assignmentsView: "upcoming" },
-  calculator: { calculatorView: "compact" },
-  calendar: { calendarView: "day" },
-  "classes-today": {},
-  "completed-assignments": {},
-  "current-date": {},
-  "current-time": {},
-  notes: { notesView: "recent" },
-  "quick-actions": {},
-  "remaining-assignments": {},
-  schedule: { scheduleView: "today" },
-  timer: { timerView: "compact" },
-  "total-assignments": {},
-  "upcoming-deadlines": {},
-}
-
-const DEFAULT_WIDGET_SIZES: Record<DashboardWidgetKind, DashboardWidgetSize> = {
-  assignments: "medium",
-  calculator: "medium",
-  calendar: "medium",
-  "classes-today": "small",
-  "completed-assignments": "small",
-  "current-date": "small",
-  "current-time": "small",
-  notes: "medium",
-  "quick-actions": "medium",
-  "remaining-assignments": "small",
-  schedule: "medium",
-  timer: "medium",
-  "total-assignments": "small",
-  "upcoming-deadlines": "small",
-}
-
 const DEFAULT_CREATED_AT = "2026-01-01T00:00:00.000Z"
 
 type PresetOptions = {
@@ -145,7 +277,8 @@ export function createDashboardWidget(
   id: string = kind,
   options?: Partial<DashboardWidget>
 ): DashboardWidget {
-  const size = options?.size ?? DEFAULT_WIDGET_SIZES[kind]
+  const definition = DASHBOARD_WIDGET_DEFINITIONS[kind]
+  const size = options?.size ?? definition.defaultSize
   const span = WIDGET_SIZE_SPANS[size]
 
   return {
@@ -156,7 +289,7 @@ export function createDashboardWidget(
     pinned: options?.pinned ?? false,
     rowSpan: options?.rowSpan ?? span.rowSpan,
     settings: {
-      ...DEFAULT_WIDGET_SETTINGS[kind],
+      ...definition.defaultSettings,
       ...options?.settings,
     },
     size,
@@ -194,14 +327,7 @@ export function normalizeDashboardState(
     return {
       ...preset,
       quickActions: normalizeQuickActions(preset.quickActions),
-      widgets: [...preset.widgets, ...missingWidgets].map((widget) => ({
-        ...createDashboardWidget(widget.kind, widget.id),
-        ...widget,
-        settings: {
-          ...DEFAULT_WIDGET_SETTINGS[widget.kind],
-          ...widget.settings,
-        },
-      })),
+      widgets: [...preset.widgets, ...missingWidgets].map(normalizeDashboardWidget),
     }
   })
   const activePresetId = normalizedPresets.some(
@@ -211,6 +337,38 @@ export function normalizeDashboardState(
     : normalizedPresets[0].id
 
   return { activePresetId, presets: normalizedPresets }
+}
+
+function normalizeDashboardWidget(widget: DashboardWidget): DashboardWidget {
+  const defaults = createDashboardWidget(widget.kind, widget.id)
+  const definition = DASHBOARD_WIDGET_DEFINITIONS[widget.kind]
+
+  return {
+    ...defaults,
+    ...widget,
+    colSpan: normalizeSpan(
+      widget.colSpan,
+      defaults.colSpan,
+      definition.constraints.minColSpan,
+      definition.constraints.maxColSpan
+    ),
+    rowSpan: normalizeSpan(
+      widget.rowSpan,
+      defaults.rowSpan,
+      definition.constraints.minRowSpan,
+      definition.constraints.maxRowSpan
+    ),
+    settings: {
+      ...definition.defaultSettings,
+      ...widget.settings,
+    },
+  }
+}
+
+function normalizeSpan(value: number, fallback: number, min: number, max: number) {
+  const normalizedValue = Number.isFinite(value) ? Math.round(value) : fallback
+
+  return Math.min(Math.max(normalizedValue, min), max)
 }
 
 export function createDefaultDashboardState(): DashboardLayoutsState {
@@ -268,7 +426,9 @@ function createPreset(
       createDashboardWidget(kind, `${id}-${kind}`, {
         hidden: hidden.has(kind),
         pinned: pinned.has(kind),
-        size: large.has(kind) ? "large" : DEFAULT_WIDGET_SIZES[kind],
+        size: large.has(kind)
+          ? "large"
+          : DASHBOARD_WIDGET_DEFINITIONS[kind].defaultSize,
       })
     ),
   }

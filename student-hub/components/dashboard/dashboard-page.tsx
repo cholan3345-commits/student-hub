@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
 } from "react"
+import { Popover } from "@base-ui/react/popover"
 import Link from "next/link"
 import {
   ArrowDown,
@@ -31,6 +32,7 @@ import {
   RotateCcw,
   Settings,
   SlidersHorizontal,
+  Sparkles,
   TimerReset,
   Upload,
   X,
@@ -39,12 +41,14 @@ import {
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card"
 import { navigationItems } from "@/components/navigation"
+import { useSharedPomodoro } from "@/components/providers/pomodoro-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { HubPopoverContent } from "@/components/ui/hub-popover-content"
 import { Select } from "@/components/ui/select"
 import {
   NAVBAR_CONTROLS,
@@ -55,14 +59,15 @@ import { useCalculatorHistory } from "@/hooks/use-calculator-history"
 import { useCalendarEvents } from "@/hooks/use-calendar-events"
 import { useDashboardLayout } from "@/hooks/use-dashboard-layout"
 import { useDraggable } from "@/hooks/use-draggable"
+import { useGridReflow } from "@/hooks/use-grid-reflow"
 import { useNotes } from "@/hooks/use-notes"
-import { pomodoroModeLabels, usePomodoro } from "@/hooks/use-pomodoro"
-import { useResizable } from "@/hooks/use-resizable"
+import { pomodoroModeLabels } from "@/hooks/use-pomodoro"
+import { useResizable, type ResizeDirection } from "@/hooks/use-resizable"
 import { useSchedule } from "@/hooks/use-schedule"
 import { useTheme } from "@/hooks/use-theme"
 import { useWidgetSettings } from "@/hooks/use-widget-settings"
 import {
-  DASHBOARD_WIDGET_COPY,
+  DASHBOARD_WIDGET_DEFINITIONS,
   QUICK_ACTIONS,
 } from "@/lib/dashboard"
 import {
@@ -108,6 +113,8 @@ const widgetIcons: Record<DashboardWidgetKind, LucideIcon> = {
   "upcoming-deadlines": Clock,
 }
 
+const widgetSettingsPopover = Popover.createHandle<string>()
+
 const themeLabels: Record<ThemeMode, string> = {
   amoled: "AMOLED",
   blue: "Blue",
@@ -128,16 +135,8 @@ type DashboardContext = {
   moveQuickAction: (draggedId: QuickActionId, targetId: QuickActionId) => void
   notes: ReturnType<typeof useNotes>["notes"]
   now: Date | null
-  pause: () => void
-  progress: number
   quickActions: QuickActionId[]
-  remainingSeconds: number
-  reset: () => void
   schedules: ScheduleItem[]
-  setMode: ReturnType<typeof usePomodoro>["setMode"]
-  start: () => void
-  state: ReturnType<typeof usePomodoro>["state"]
-  totalSeconds: number
   upcomingDeadlines: Assignment[]
 }
 
@@ -148,30 +147,61 @@ export function DashboardPage() {
   const { events } = useCalendarEvents()
   const { notes } = useNotes()
   const { schedules } = useSchedule()
-  const {
-    pause,
-    progress,
-    remainingSeconds,
-    reset,
-    setMode,
-    start,
-    state,
-    totalSeconds,
-  } = usePomodoro()
   const [now, setNow] = useState<Date | null>(null)
   const [maximizedWidgetId, setMaximizedWidgetId] = useState<string | null>(null)
+  const maximizedCloseButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [dashboardGridElement, setDashboardGridElement] = useState<HTMLElement | null>(null)
   const gridColumns = useDashboardColumns()
+  const gridLayoutKey = dashboardLayout.visibleWidgets
+    .map(
+      (widget) =>
+        `${widget.id}:${widget.colSpan}:${widget.rowSpan}:${widget.pinned ? "pinned" : "free"}`
+    )
+    .join("|")
+
+  useGridReflow(dashboardGridElement, `${gridColumns}:${gridLayoutKey}`)
 
   useEffect(() => {
     const tick = () => setNow(new Date())
     const timeout = window.setTimeout(tick, 0)
-    const interval = window.setInterval(() => setNow(new Date()), 1000)
+    const interval = window.setInterval(tick, 60_000)
 
     return () => {
       window.clearTimeout(timeout)
       window.clearInterval(interval)
     }
   }, [])
+
+  useEffect(() => {
+    if (!maximizedWidgetId) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+    const focusFrame = window.requestAnimationFrame(() => {
+      maximizedCloseButtonRef.current?.focus()
+    })
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMaximizedWidgetId(null)
+      }
+    }
+
+    document.body.style.overflow = "hidden"
+    document.addEventListener("keydown", closeOnEscape)
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener("keydown", closeOnEscape)
+      previousFocus?.focus()
+    }
+  }, [maximizedWidgetId])
 
   const activeAssignments = useMemo(
     () =>
@@ -204,55 +234,62 @@ export function DashboardPage() {
     moveQuickAction: dashboardLayout.moveQuickAction,
     notes,
     now,
-    pause,
-    progress,
     quickActions: dashboardLayout.activePreset.quickActions,
-    remainingSeconds,
-    reset,
     schedules,
-    setMode,
-    start,
-    state,
-    totalSeconds,
     upcomingDeadlines,
   }
-
   return (
     <PageContent>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-normal text-zinc-50 sm:text-4xl">
-            Dashboard
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-            A customizable workspace for classes, assignments, notes, study tools,
-            and files.
-          </p>
+      <section className="hub-glass-strong mb-5 overflow-hidden rounded-[2rem] p-5 sm:p-6">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--hub-accent)] to-transparent opacity-80" />
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_22rem] xl:items-end">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)] px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-[var(--hub-accent)]">
+              <Sparkles className="size-3.5" aria-hidden="true" />
+              Student Command Center
+            </div>
+            <h1 className="break-words text-3xl font-semibold tracking-normal text-[var(--hub-text)] sm:text-4xl lg:text-5xl">
+              {getDashboardGreeting(now)}
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--hub-muted-text)] sm:text-base">
+              Your classes, deadlines, notes, timer, and AI workspace are arranged as
+              customizable glass widgets.
+            </p>
+          </div>
+          <div className="grid gap-3">
+            <Button
+              type="button"
+              onClick={() => dashboardLayout.setCustomizeMode(!dashboardLayout.customizeMode)}
+              className={cn(
+                "h-12 rounded-2xl px-4",
+                dashboardLayout.customizeMode && "bg-emerald-500 text-white hover:bg-emerald-400"
+              )}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden="true" />
+              {dashboardLayout.customizeMode ? "Done Customizing" : "Customize Dashboard"}
+            </Button>
+            <Link
+              href="/ai"
+              className="hub-glass-control hub-focus flex h-12 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium text-[var(--hub-text)] transition-[color,background-color,border-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)] hover:text-[var(--hub-accent)]"
+            >
+              <Sparkles className="size-4" aria-hidden="true" />
+              Open AI Hub
+            </Link>
+          </div>
         </div>
-        <Button
-          type="button"
-          onClick={() => dashboardLayout.setCustomizeMode(!dashboardLayout.customizeMode)}
-          className={cn(
-            "h-11 rounded-xl px-4 text-white",
-            dashboardLayout.customizeMode
-              ? "bg-emerald-500/85 hover:bg-emerald-400"
-              : "bg-blue-500/85 hover:bg-blue-400"
-          )}
-        >
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
-          {dashboardLayout.customizeMode ? "Done Customizing" : "Customize Dashboard"}
-        </Button>
-      </div>
+      </section>
 
       {dashboardLayout.customizeMode ? (
         <DashboardCustomizePanel layout={dashboardLayout} />
       ) : null}
 
       <section
-        className="grid gap-4"
+        ref={setDashboardGridElement}
+        data-dashboard-grid
+        className="grid items-start gap-4"
         style={{
           gridAutoFlow: "row dense",
-          gridAutoRows: "minmax(72px, auto)",
+          gridAutoRows: "minmax(80px, auto)",
           gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
         }}
       >
@@ -261,14 +298,8 @@ export function DashboardPage() {
             key={widget.id}
             columns={gridColumns}
             customizeMode={dashboardLayout.customizeMode}
-            duplicateWidget={dashboardLayout.duplicateWidget}
-            hideWidget={dashboardLayout.hideWidget}
             moveWidget={dashboardLayout.moveWidget}
-            onMaximize={() => setMaximizedWidgetId(widget.id)}
             resizeWidget={dashboardLayout.resizeWidget}
-            setWidgetSize={dashboardLayout.setWidgetSize}
-            togglePinWidget={dashboardLayout.togglePinWidget}
-            updateWidgetSettings={dashboardLayout.updateWidgetSettings}
             widget={widget}
           >
             {renderWidgetContent(widget, context, dashboardLayout.customizeMode)}
@@ -276,15 +307,39 @@ export function DashboardPage() {
         ))}
       </section>
 
+      <DashboardWidgetSettingsPopover
+        duplicateWidget={dashboardLayout.duplicateWidget}
+        hideWidget={dashboardLayout.hideWidget}
+        onMaximize={setMaximizedWidgetId}
+        setWidgetSize={dashboardLayout.setWidgetSize}
+        togglePinWidget={dashboardLayout.togglePinWidget}
+        updateWidgetSettings={dashboardLayout.updateWidgetSettings}
+        widgets={dashboardLayout.activePreset.widgets}
+      />
+
       {maximizedWidget ? (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4 backdrop-blur">
+        <div
+          role="dialog"
+          aria-label={`${DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].title} maximized widget`}
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setMaximizedWidgetId(null)
+            }
+          }}
+          className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4 backdrop-blur"
+        >
           <div className="w-full max-w-5xl">
             <DashboardCard
-              title={DASHBOARD_WIDGET_COPY[maximizedWidget.kind].title}
-              description={DASHBOARD_WIDGET_COPY[maximizedWidget.kind].description}
+              title={DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].title}
+              description={
+                DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].description
+              }
+              emphasis={DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].emphasis}
               icon={widgetIcons[maximizedWidget.kind]}
               actions={
                 <Button
+                  ref={maximizedCloseButtonRef}
                   type="button"
                   variant="ghost"
                   size="icon-lg"
@@ -307,92 +362,215 @@ export function DashboardPage() {
 }
 
 function PageContent({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto w-full max-w-[92rem] px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+  return <div className="mx-auto w-full max-w-[92rem] px-3 py-5 sm:px-5 lg:px-7 xl:px-8">{children}</div>
 }
 
 function DashboardWidgetShell({
   children,
   columns,
   customizeMode,
-  duplicateWidget,
-  hideWidget,
   moveWidget,
-  onMaximize,
   resizeWidget,
-  setWidgetSize,
-  togglePinWidget,
-  updateWidgetSettings,
   widget,
 }: {
   children: React.ReactNode
   columns: number
   customizeMode: boolean
-  duplicateWidget: (widgetId: string) => void
-  hideWidget: (widgetId: string) => void
   moveWidget: (draggedId: string, targetId: string) => void
-  onMaximize: () => void
   resizeWidget: (widgetId: string, colSpan: number, rowSpan: number) => void
-  setWidgetSize: (widgetId: string, size: DashboardWidgetSize) => void
-  togglePinWidget: (widgetId: string) => void
-  updateWidgetSettings: (
-    widgetId: string,
-    settings: DashboardWidgetSettings
-  ) => void
   widget: DashboardWidget
 }) {
   const span = Math.max(1, Math.min(widget.colSpan, columns))
   const Icon = widgetIcons[widget.kind]
-  const copy = DASHBOARD_WIDGET_COPY[widget.kind]
-  const { handleProps: dragHandleProps, isDragging } = useDraggable({
-    disabled: !customizeMode,
+  const definition = DASHBOARD_WIDGET_DEFINITIONS[widget.kind]
+  const constraints = definition.constraints
+  const {
+    handleProps: dragHandleProps,
+    isDragPending,
+    isDragging,
+  } = useDraggable({
+    boundarySelector: "[data-dashboard-grid]",
     id: widget.id,
+    onDragStart: () => widgetSettingsPopover.close(),
     onMove: moveWidget,
     targetSelector: "[data-dashboard-widget]",
+    topBoundarySelector: "[data-app-navbar]",
   })
-  const { handleProps: resizeHandleProps, isResizing } = useResizable({
+  const { getHandleProps: getResizeHandleProps, isResizing } = useResizable({
     colSpan: widget.colSpan,
-    disabled: !customizeMode,
-    maxColSpan: Math.max(2, columns),
+    maxColSpan: Math.min(columns, constraints.maxColSpan),
+    maxRowSpan: constraints.maxRowSpan,
+    minColSpan: Math.min(columns, constraints.minColSpan),
+    minRowSpan: constraints.minRowSpan,
     onResize: (colSpan, rowSpan) => resizeWidget(widget.id, colSpan, rowSpan),
-    rowSpan: widget.rowSpan,
+    onResizeStart: () => widgetSettingsPopover.close(),
   })
+  const widgetHeight = Math.max(160, widget.rowSpan * 80)
   const widgetStyle: CSSProperties = {
     gridColumn: `span ${span} / span ${span}`,
-    minHeight: Math.max(180, widget.rowSpan * 88),
+    ...(widget.size === "custom"
+      ? { height: widgetHeight }
+      : { minHeight: widgetHeight }),
   }
 
   return (
     <div
       data-dashboard-widget
       data-drag-id={widget.id}
+      data-drag-state={isDragging ? "active" : isDragPending ? "pending" : "idle"}
+      data-resize-state={isResizing ? "active" : "idle"}
       className={cn(
-        "relative min-w-0 transition duration-200",
-        isDragging && "scale-[0.985] opacity-70",
-        isResizing && "ring-2 ring-blue-400/40",
+        "relative min-w-0",
+        isResizing
+          ? "transition-opacity duration-150 ease-out"
+          : "transition-[height,min-height,opacity] duration-200 ease-out",
+        isDragging && "opacity-25",
+        isResizing && "hub-accent-ring",
         widget.pinned && "order-first"
       )}
       style={widgetStyle}
     >
       <DashboardCard
-        title={copy.title}
-        description={copy.description}
+        title={definition.title}
+        description={definition.description}
+        emphasis={definition.emphasis}
         icon={Icon}
         actions={
-          <div className="flex shrink-0 items-center gap-1">
+          <div data-no-drag className="flex shrink-0 cursor-default items-center gap-1.5">
             {widget.pinned ? (
-              <Pin className="size-4 fill-blue-300 text-blue-300" aria-hidden="true" />
+              <Pin
+                className="size-4 fill-[var(--hub-accent)] text-[var(--hub-accent)]"
+                aria-hidden="true"
+              />
             ) : null}
-            {customizeMode ? (
-              <button
-                type="button"
-                {...dragHandleProps}
-                aria-label="Drag widget"
-                className="grid size-9 cursor-grab place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:bg-white/[0.07] hover:text-zinc-100 active:cursor-grabbing"
-              >
-                <GripVertical className="size-4" aria-hidden="true" />
-              </button>
-            ) : null}
-            <DashboardWidgetMenu
+            <button
+              type="button"
+              data-drag-allow
+              aria-label={`Drag ${definition.title} widget`}
+              title="Drag widget"
+              className={cn(
+                "grid size-9 cursor-grab place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 opacity-70 transition-[color,background-color,border-color,opacity,transform] duration-200 ease-out hover:bg-white/[0.07] hover:text-zinc-100 hover:opacity-100 active:cursor-grabbing",
+                isDragPending && "hub-accent-ring text-[var(--hub-accent)] opacity-100",
+                isDragging && "cursor-grabbing text-[var(--hub-accent)] opacity-100"
+              )}
+            >
+              <GripVertical className="size-4" aria-hidden="true" />
+            </button>
+            <Popover.Trigger
+              handle={widgetSettingsPopover}
+              payload={widget.id}
+              data-no-drag
+              aria-label={`${definition.title} widget settings`}
+              title="Widget settings"
+              className="hub-focus grid size-9 place-items-center rounded-xl text-zinc-400 transition-[color,background-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/[0.06] hover:text-zinc-100"
+            >
+              <Settings className="size-4" aria-hidden="true" />
+            </Popover.Trigger>
+          </div>
+        }
+        className={cn(
+          "flex min-h-full flex-col overflow-hidden",
+          customizeMode && "ring-1 ring-[var(--hub-accent-border)]",
+          isDragPending && "border-[var(--hub-accent-border)] shadow-2xl shadow-[var(--hub-accent-glow)]",
+          isDragging && "border-[var(--hub-accent-border)] shadow-2xl shadow-[var(--hub-accent-glow)]"
+        )}
+        contentClassName="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        headerProps={
+          {
+            ...dragHandleProps,
+            "data-drag-handle": "true",
+            className: cn(
+              "relative shrink-0 cursor-grab select-none rounded-t-2xl transition-colors duration-200 ease-out active:cursor-grabbing",
+              isDragPending && "bg-[var(--hub-accent-soft)]",
+              isDragging && "cursor-grabbing bg-[var(--hub-accent-soft)]"
+            ),
+          }
+        }
+      >
+        {children}
+      </DashboardCard>
+      <WidgetResizeZones getHandleProps={getResizeHandleProps} />
+    </div>
+  )
+}
+
+const resizeZones: Array<{
+  className: string
+  direction: ResizeDirection
+}> = [
+  { direction: "n", className: "left-3 right-3 top-0 h-2" },
+  { direction: "s", className: "bottom-0 left-3 right-3 h-2" },
+  { direction: "e", className: "bottom-3 right-0 top-3 w-2" },
+  { direction: "w", className: "bottom-3 left-0 top-3 w-2" },
+  { direction: "nw", className: "left-0 top-0 size-2.5" },
+  { direction: "ne", className: "right-0 top-0 size-2.5" },
+  { direction: "sw", className: "bottom-0 left-0 size-2.5" },
+  { direction: "se", className: "bottom-0 right-0 size-2.5" },
+]
+
+function WidgetResizeZones({
+  getHandleProps,
+}: {
+  getHandleProps: ReturnType<typeof useResizable>["getHandleProps"]
+}) {
+  return (
+    <>
+      {resizeZones.map((zone) => (
+        <div
+          key={zone.direction}
+          {...getHandleProps(zone.direction)}
+          data-resize-handle
+          className={cn(
+            "hub-widget-resize-zone absolute z-20",
+            zone.className
+          )}
+        />
+      ))}
+    </>
+  )
+}
+
+function DashboardWidgetSettingsPopover({
+  duplicateWidget,
+  hideWidget,
+  onMaximize,
+  setWidgetSize,
+  togglePinWidget,
+  updateWidgetSettings,
+  widgets,
+}: {
+  duplicateWidget: (widgetId: string) => void
+  hideWidget: (widgetId: string) => void
+  onMaximize: (widgetId: string) => void
+  setWidgetSize: (widgetId: string, size: DashboardWidgetSize) => void
+  togglePinWidget: (widgetId: string) => void
+  updateWidgetSettings: (
+    widgetId: string,
+    settings: DashboardWidgetSettings
+  ) => void
+  widgets: DashboardWidget[]
+}) {
+  return (
+    <Popover.Root handle={widgetSettingsPopover}>
+      {({ payload }) => {
+        const widget = widgets.find((item) => item.id === payload)
+
+        if (!widget) {
+          return null
+        }
+
+        return (
+          <HubPopoverContent
+            align="start"
+            positionerClassName="z-[80]"
+            popupProps={{
+              "data-no-drag": true,
+              "data-widget-settings-popup": widget.id,
+              className:
+                "max-h-[min(34rem,calc(100dvh-1.5rem))] w-[min(19rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain p-4",
+            }}
+          >
+            <DashboardWidgetSettingsContent
               duplicateWidget={duplicateWidget}
               hideWidget={hideWidget}
               onMaximize={onMaximize}
@@ -401,30 +579,14 @@ function DashboardWidgetShell({
               updateWidgetSettings={updateWidgetSettings}
               widget={widget}
             />
-          </div>
-        }
-        className={cn(
-          "h-full overflow-hidden",
-          customizeMode && "ring-1 ring-blue-400/20"
-        )}
-        contentClassName="h-[calc(100%-5.5rem)] overflow-y-auto"
-      >
-        {children}
-      </DashboardCard>
-      {customizeMode ? (
-        <button
-          type="button"
-          {...resizeHandleProps}
-          className="absolute bottom-2 right-2 grid size-7 cursor-nwse-resize place-items-center rounded-lg border border-blue-400/30 bg-blue-500/20 text-blue-100 shadow-lg shadow-black/30"
-        >
-          <Maximize2 className="size-3.5" aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
+          </HubPopoverContent>
+        )
+      }}
+    </Popover.Root>
   )
 }
 
-function DashboardWidgetMenu({
+function DashboardWidgetSettingsContent({
   duplicateWidget,
   hideWidget,
   onMaximize,
@@ -435,7 +597,7 @@ function DashboardWidgetMenu({
 }: {
   duplicateWidget: (widgetId: string) => void
   hideWidget: (widgetId: string) => void
-  onMaximize: () => void
+  onMaximize: (widgetId: string) => void
   setWidgetSize: (widgetId: string, size: DashboardWidgetSize) => void
   togglePinWidget: (widgetId: string) => void
   updateWidgetSettings: (
@@ -444,70 +606,88 @@ function DashboardWidgetMenu({
   ) => void
   widget: DashboardWidget
 }) {
-  const [open, setOpen] = useState(false)
   const { setSize, updateSettings } = useWidgetSettings({
     setWidgetSize,
     updateWidgetSettings,
     widget,
   })
 
+  function runAndClose(action: () => void) {
+    widgetSettingsPopover.close()
+    action()
+  }
+
   return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-lg"
-        aria-label="Widget settings"
-        onClick={() => setOpen((current) => !current)}
-        className="size-9 rounded-xl text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-      >
-        <Settings className="size-4" aria-hidden="true" />
-      </Button>
-      {open ? (
-        <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-white/10 bg-[#111827]/98 p-3 text-sm shadow-2xl shadow-black/40 backdrop-blur">
-          <Field label="Widget Size">
-            <div className="grid grid-cols-3 gap-2">
-              {(["small", "medium", "large"] as DashboardWidgetSize[]).map((size) => (
-                <Button
-                  key={size}
-                  type="button"
-                  variant={widget.size === size ? "default" : "ghost"}
-                  onClick={() => setSize(size)}
-                  className={cn(
-                    "h-9 rounded-xl capitalize",
-                    widget.size === size
-                      ? "bg-blue-500/85 text-white"
-                      : "border border-white/10 bg-white/[0.04] text-zinc-200"
-                  )}
-                >
-                  {size}
-                </Button>
-              ))}
-            </div>
-          </Field>
-
-          <WidgetSettingControl widget={widget} updateSettings={updateSettings} />
-
-          <div className="mt-3 grid gap-2">
-            <MenuButton icon={Maximize2} label="Maximize" onClick={onMaximize} />
-            <MenuButton
-              icon={widget.pinned ? PinOff : Pin}
-              label={widget.pinned ? "Unpin Widget" : "Pin Widget"}
-              onClick={() => togglePinWidget(widget.id)}
-            />
-            <MenuButton
-              icon={Copy}
-              label="Duplicate Widget"
-              onClick={() => duplicateWidget(widget.id)}
-            />
-            <MenuButton
-              icon={EyeOff}
-              label="Hide Widget"
-              onClick={() => hideWidget(widget.id)}
-            />
-          </div>
+    <div className="grid gap-3">
+      <div className="flex min-w-0 items-start justify-between gap-3 border-b border-white/10 pb-3">
+        <div className="grid min-w-0 gap-1">
+          <Popover.Title className="text-sm font-semibold text-[var(--hub-text)]">
+            Widget settings
+          </Popover.Title>
+          <p className="truncate text-xs leading-4 text-[var(--hub-muted-text)]">
+            {DASHBOARD_WIDGET_DEFINITIONS[widget.kind].title}
+          </p>
         </div>
-      ) : null}
+        <Popover.Close
+          aria-label="Close widget settings"
+          className="hub-focus grid size-8 shrink-0 place-items-center rounded-lg text-zinc-400 transition-colors duration-150 hover:bg-white/[0.08] hover:text-zinc-100"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </Popover.Close>
+      </div>
+
+      <Field label="Widget Size">
+        <div className="grid grid-cols-4 gap-1.5">
+          {(["small", "medium", "large", "custom"] as DashboardWidgetSize[]).map((size) => (
+            <Button
+              key={size}
+              type="button"
+              variant={widget.size === size ? "default" : "ghost"}
+              onClick={() => setSize(size)}
+              className={cn(
+                "h-9 min-w-0 rounded-xl px-1.5 text-xs capitalize",
+                widget.size === size
+                  ? "hub-accent-bg"
+                  : "hub-glass-control text-zinc-200"
+              )}
+            >
+              {size}
+            </Button>
+          ))}
+        </div>
+        {widget.size === "custom" ? (
+          <p className="text-xs leading-5 text-[var(--hub-muted-text)]">
+            Custom: {widget.colSpan} columns by {widget.rowSpan * 80}px
+          </p>
+        ) : null}
+      </Field>
+
+      <WidgetSettingControl widget={widget} updateSettings={updateSettings} />
+
+      <div className="grid gap-1.5 border-t border-white/10 pt-3">
+        <MenuButton
+          icon={Maximize2}
+          label="Maximize"
+          onClick={() => runAndClose(() => onMaximize(widget.id))}
+        />
+        <MenuButton
+          icon={widget.pinned ? PinOff : Pin}
+          label={widget.pinned ? "Unpin Widget" : "Pin Widget"}
+          onClick={() => runAndClose(() => togglePinWidget(widget.id))}
+        />
+        {DASHBOARD_WIDGET_DEFINITIONS[widget.kind].duplicable ? (
+          <MenuButton
+            icon={Copy}
+            label="Duplicate Widget"
+            onClick={() => runAndClose(() => duplicateWidget(widget.id))}
+          />
+        ) : null}
+        <MenuButton
+          icon={EyeOff}
+          label="Hide Widget"
+          onClick={() => runAndClose(() => hideWidget(widget.id))}
+        />
+      </div>
     </div>
   )
 }
@@ -519,133 +699,30 @@ function WidgetSettingControl({
   updateSettings: (settings: DashboardWidgetSettings) => void
   widget: DashboardWidget
 }) {
-  if (widget.kind === "calendar") {
-    return (
-      <Field label="Calendar View" className="mt-3">
-        <Select
-          value={widget.settings.calendarView ?? "day"}
-          onChange={(event) =>
-            updateSettings({
-              calendarView: event.target.value as NonNullable<
-                DashboardWidgetSettings["calendarView"]
-              >,
-            })
-          }
-        >
-          <option value="month">Month</option>
-          <option value="week">Week</option>
-          <option value="day">Day</option>
-        </Select>
-      </Field>
-    )
+  const setting = DASHBOARD_WIDGET_DEFINITIONS[widget.kind].setting
+
+  if (!setting) {
+    return null
   }
 
-  if (widget.kind === "assignments") {
-    return (
-      <Field label="Assignments View" className="mt-3">
-        <Select
-          value={widget.settings.assignmentsView ?? "upcoming"}
-          onChange={(event) =>
-            updateSettings({
-              assignmentsView: event.target.value as NonNullable<
-                DashboardWidgetSettings["assignmentsView"]
-              >,
-            })
-          }
-        >
-          <option value="upcoming">Upcoming</option>
-          <option value="overdue">Overdue</option>
-          <option value="completed">Completed</option>
-        </Select>
-      </Field>
-    )
-  }
-
-  if (widget.kind === "schedule") {
-    return (
-      <Field label="Schedule View" className="mt-3">
-        <Select
-          value={widget.settings.scheduleView ?? "today"}
-          onChange={(event) =>
-            updateSettings({
-              scheduleView: event.target.value as NonNullable<
-                DashboardWidgetSettings["scheduleView"]
-              >,
-            })
-          }
-        >
-          <option value="today">Today</option>
-          <option value="tomorrow">Tomorrow</option>
-          <option value="week">Week</option>
-        </Select>
-      </Field>
-    )
-  }
-
-  if (widget.kind === "notes") {
-    return (
-      <Field label="Notes View" className="mt-3">
-        <Select
-          value={widget.settings.notesView ?? "recent"}
-          onChange={(event) =>
-            updateSettings({
-              notesView: event.target.value as NonNullable<
-                DashboardWidgetSettings["notesView"]
-              >,
-            })
-          }
-        >
-          <option value="recent">Recent</option>
-          <option value="favorites">Favorites</option>
-        </Select>
-      </Field>
-    )
-  }
-
-  if (widget.kind === "calculator") {
-    return (
-      <Field label="Calculator View" className="mt-3">
-        <Select
-          value={widget.settings.calculatorView ?? "compact"}
-          onChange={(event) =>
-            updateSettings({
-              calculatorView: event.target.value as NonNullable<
-                DashboardWidgetSettings["calculatorView"]
-              >,
-            })
-          }
-        >
-          <option value="compact">Compact</option>
-          <option value="expanded">Expanded</option>
-        </Select>
-      </Field>
-    )
-  }
-
-  if (widget.kind === "timer") {
-    return (
-      <Field label="Timer View" className="mt-3">
-        <Select
-          value={widget.settings.timerView ?? "compact"}
-          onChange={(event) =>
-            updateSettings({
-              timerView: event.target.value as NonNullable<
-                DashboardWidgetSettings["timerView"]
-              >,
-            })
-          }
-        >
-          <option value="compact">Compact</option>
-          <option value="full">Full</option>
-        </Select>
-      </Field>
-    )
-  }
+  const value =
+    (widget.settings[setting.key] as string | undefined) ?? setting.defaultValue
 
   return (
-    <Field label="Widget View" className="mt-3">
-      <Select value="live" onChange={() => undefined}>
-        <option value="live">Live Metric</option>
+    <Field label={setting.label}>
+      <Select
+        value={value}
+        onChange={(event) =>
+          updateSettings({
+            [setting.key]: event.target.value,
+          } as DashboardWidgetSettings)
+        }
+      >
+        {setting.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </Select>
     </Field>
   )
@@ -664,7 +741,7 @@ function MenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 items-center gap-2 rounded-xl px-2 text-left text-zinc-300 transition hover:bg-white/[0.06] hover:text-zinc-100"
+      className="hub-focus flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-left text-zinc-300 transition-[color,background-color,transform] duration-150 ease-out hover:translate-x-0.5 hover:bg-white/[0.07] hover:text-zinc-100"
     >
       <Icon className="size-4" aria-hidden="true" />
       {label}
@@ -691,6 +768,12 @@ function DashboardCustomizePanel({
     updateSidebar,
   } = useWorkspacePreferences()
   const { accentColor, setAccentColor, setTheme, theme } = useTheme()
+  const [customAccentDraft, setCustomAccentDraft] = useState({
+    source: accentColor,
+    value: accentColor,
+  })
+  const customAccent =
+    customAccentDraft.source === accentColor ? customAccentDraft.value : accentColor
   const orderedNavigationItems = useMemo(() => {
     const byHref = new Map(navigationItems.map((item) => [item.href, item]))
 
@@ -701,6 +784,19 @@ function DashboardCustomizePanel({
 
   const layoutName =
     layoutNameDrafts[layout.activePreset.id] ?? layout.activePreset.name
+
+  function applyAccentColor(color: string) {
+    const nextColor = color.trim()
+
+    setCustomAccentDraft({
+      source: isValidHexColor(nextColor) ? nextColor.toLowerCase() : accentColor,
+      value: nextColor,
+    })
+
+    if (isValidHexColor(nextColor)) {
+      setAccentColor(nextColor)
+    }
+  }
 
   async function uploadWallpaper(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -747,7 +843,7 @@ function DashboardCustomizePanel({
               <Button
                 type="button"
                 onClick={() => layout.renamePreset(layout.activePreset.id, layoutName)}
-                className="h-10 rounded-xl bg-blue-500/85 px-3 text-white"
+                className="h-10 rounded-xl px-3"
               >
                 Save
               </Button>
@@ -766,7 +862,7 @@ function DashboardCustomizePanel({
                   layout.createPreset(newLayoutName)
                   setNewLayoutName("")
                 }}
-                className="h-10 rounded-xl bg-blue-500/85 px-3 text-white"
+                className="h-10 rounded-xl px-3"
               >
                 <Plus className="size-4" aria-hidden="true" />
               </Button>
@@ -820,7 +916,7 @@ function DashboardCustomizePanel({
                     className="h-9 rounded-xl border border-white/10 bg-white/[0.04] text-zinc-100"
                   >
                     <Eye className="size-4" aria-hidden="true" />
-                    {DASHBOARD_WIDGET_COPY[widget.kind].title}
+                    {DASHBOARD_WIDGET_DEFINITIONS[widget.kind].title}
                   </Button>
                 ))
               ) : (
@@ -844,7 +940,7 @@ function DashboardCustomizePanel({
                     className={cn(
                       "h-9 rounded-xl px-3",
                       theme === mode
-                        ? "bg-blue-500/85 text-white"
+                        ? "hub-accent-bg"
                         : "border border-white/10 bg-white/[0.04] text-zinc-100"
                     )}
                   >
@@ -858,10 +954,10 @@ function DashboardCustomizePanel({
                     <button
                       key={`${color.name}-${color.value}`}
                       type="button"
-                      onClick={() => setAccentColor(color.value)}
+                      onClick={() => applyAccentColor(color.value)}
                       className={cn(
-                        "size-8 rounded-full border border-white/15 transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
-                        accentColor === color.value && "ring-2 ring-blue-300"
+                        "size-8 rounded-full border border-white/15 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-accent-ring)]",
+                        accentColor === color.value && "hub-accent-ring"
                       )}
                       style={{ backgroundColor: color.value }}
                       aria-label={color.name}
@@ -869,10 +965,23 @@ function DashboardCustomizePanel({
                   ))}
                   <Input
                     type="color"
-                    value={normalizeColorInput(accentColor)}
-                    onChange={(event) => setAccentColor(event.target.value)}
+                    value={normalizeColorInput(customAccent, accentColor)}
+                    onChange={(event) => applyAccentColor(event.target.value)}
                     className="h-10 w-16 p-1"
                     aria-label="Custom accent color"
+                  />
+                  <Input
+                    value={customAccent}
+                    onChange={(event) => applyAccentColor(event.target.value)}
+                    placeholder="#8B5CF6"
+                    aria-label="Custom accent HEX value"
+                    aria-invalid={customAccent.length > 0 && !isValidHexColor(customAccent)}
+                    className={cn(
+                      "h-10 w-32 font-mono uppercase",
+                      customAccent.length > 0 &&
+                        !isValidHexColor(customAccent) &&
+                        "border-red-400/50 focus-visible:border-red-400/60 focus-visible:ring-red-500/20"
+                    )}
                   />
                 </div>
               </Field>
@@ -1050,7 +1159,7 @@ function PreferenceRow({
 }) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] p-2">
-      <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-sm text-zinc-200">{label}</span>
       <IconButton icon={ArrowUp} label="Move up" onClick={onMoveUp} />
       <IconButton icon={ArrowDown} label="Move down" onClick={onMoveDown} />
       {trailing}
@@ -1075,7 +1184,7 @@ function IconButton({
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
-      className="grid size-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100 disabled:pointer-events-none disabled:opacity-30"
+      className="grid size-8 place-items-center rounded-lg text-zinc-400 transition-[color,background-color,opacity] duration-150 ease-out hover:bg-white/[0.06] hover:text-zinc-100 disabled:pointer-events-none disabled:opacity-30"
     >
       <Icon className="size-4" aria-hidden="true" />
     </button>
@@ -1090,6 +1199,7 @@ function renderWidgetContent(
   if (widget.kind === "schedule") {
     return (
       <ScheduleWidget
+        limit={getWidgetItemLimit(widget)}
         now={context.now}
         schedules={context.schedules}
         settings={widget.settings}
@@ -1102,29 +1212,24 @@ function renderWidgetContent(
       <AssignmentsWidget
         activeAssignments={context.activeAssignments}
         completedAssignments={context.completedAssignments}
+        limit={getWidgetItemLimit(widget)}
         settings={widget.settings}
       />
     )
   }
 
   if (widget.kind === "notes") {
-    return <NotesWidget notes={context.notes} settings={widget.settings} />
+    return (
+      <NotesWidget
+        limit={getWidgetItemLimit(widget)}
+        notes={context.notes}
+        settings={widget.settings}
+      />
+    )
   }
 
   if (widget.kind === "timer") {
-    return (
-      <TimerWidget
-        pause={context.pause}
-        progress={context.progress}
-        remainingSeconds={context.remainingSeconds}
-        reset={context.reset}
-        setMode={context.setMode}
-        settings={widget.settings}
-        start={context.start}
-        state={context.state}
-        totalSeconds={context.totalSeconds}
-      />
-    )
+    return <TimerWidget settings={widget.settings} />
   }
 
   if (widget.kind === "calculator") {
@@ -1136,6 +1241,7 @@ function renderWidgetContent(
       <CalendarWidget
         assignments={context.assignments}
         events={context.events}
+        limit={getWidgetItemLimit(widget)}
         now={context.now}
         schedules={context.schedules}
         settings={widget.settings}
@@ -1149,7 +1255,29 @@ function renderWidgetContent(
         actions={context.quickActions}
         customizeMode={customizeMode}
         moveQuickAction={context.moveQuickAction}
-        startTimer={context.start}
+      />
+    )
+  }
+
+  if (widget.kind === "current-time") {
+    return <CurrentTimeWidget />
+  }
+
+  if (widget.kind === "upcoming-deadlines") {
+    return (
+      <DeadlinesWidget
+        assignments={context.upcomingDeadlines}
+        limit={getWidgetItemLimit(widget)}
+      />
+    )
+  }
+
+  if (widget.kind === "classes-today") {
+    return (
+      <ClassesTodayWidget
+        limit={getWidgetItemLimit(widget)}
+        now={context.now}
+        schedules={context.schedules}
       />
     )
   }
@@ -1158,10 +1286,12 @@ function renderWidgetContent(
 }
 
 function ScheduleWidget({
+  limit,
   now,
   schedules,
   settings,
 }: {
+  limit: number
   now: Date | null
   schedules: ScheduleItem[]
   settings: DashboardWidgetSettings
@@ -1197,21 +1327,23 @@ function ScheduleWidget({
   }
 
   return (
-    <div className="space-y-3">
-      {items.slice(0, 5).map((item) => (
+    <div className="grid gap-3">
+      {items.slice(0, limit).map((item) => (
         <div
           key={item.id}
-          className="flex items-center justify-between gap-4 rounded-xl border border-blue-400/20 bg-blue-500/[0.06] p-3"
+          className="hub-glass-control relative overflow-hidden rounded-2xl p-3 pl-7 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-3 sm:p-3"
         >
-          <div className="min-w-0">
-            <p className="truncate font-medium text-zinc-100">{item.subject}</p>
-            <p className="text-sm text-zinc-500">
+          <span className="absolute bottom-3 left-4 top-3 w-px bg-gradient-to-b from-[var(--hub-accent)] via-[var(--hub-accent-border)] to-transparent sm:hidden" />
+          <span className="hidden size-3 rounded-full bg-[var(--hub-accent)] shadow-[0_0_18px_var(--hub-accent)] sm:block" />
+          <div className="grid min-w-0 gap-1">
+            <p className="break-words font-medium text-zinc-100">{item.subject}</p>
+            <p className="break-words text-sm leading-5 text-zinc-500">
               {[view === "week" ? item.day : "", item.room, item.instructor]
                 .filter(Boolean)
                 .join(" - ") || "No room or instructor"}
             </p>
           </div>
-          <Badge tone="blue">
+          <Badge tone="blue" className="w-fit">
             {formatTime(item.startTime)} - {formatTime(item.endTime)}
           </Badge>
         </div>
@@ -1223,10 +1355,12 @@ function ScheduleWidget({
 function AssignmentsWidget({
   activeAssignments,
   completedAssignments,
+  limit,
   settings,
 }: {
   activeAssignments: Assignment[]
   completedAssignments: Assignment[]
+  limit: number
   settings: DashboardWidgetSettings
 }) {
   const view = settings.assignmentsView ?? "upcoming"
@@ -1242,32 +1376,45 @@ function AssignmentsWidget({
   }
 
   return (
-    <div className="space-y-3">
-      {assignments.slice(0, 5).map((assignment) => {
+    <div className="grid gap-3">
+      {assignments.slice(0, limit).map((assignment) => {
         const overdue = assignment.status !== "Completed" && isPastDate(assignment.dueDate)
 
         return (
           <div
             key={assignment.id}
             className={cn(
-              "rounded-xl border border-white/10 bg-white/[0.035] p-3",
-              overdue && "border-red-400/25 bg-red-500/[0.06]"
+              "hub-glass-control rounded-2xl p-3",
+              overdue && "border-red-400/30 bg-red-500/[0.075]"
             )}
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-zinc-100">{assignment.title}</p>
-                <p className="mt-1 text-sm text-zinc-500">
+              <div className="grid min-w-0 gap-1">
+                <p className="break-words font-medium text-zinc-100">{assignment.title}</p>
+                <p className="break-words text-sm leading-5 text-zinc-500">
                   {assignment.subject || "No subject"}
                 </p>
               </div>
-              <Badge tone={assignment.status === "Completed" ? "green" : overdue ? "red" : "yellow"}>
+              <Badge tone={assignment.status === "Completed" ? "green" : overdue ? "red" : assignment.priority === "High" ? "yellow" : "blue"}>
                 {assignment.status === "Completed"
                   ? "Completed"
                   : overdue
                     ? "Overdue"
                     : formatDateLabel(assignment.dueDate)}
               </Badge>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-[width] duration-200 ease-out",
+                  assignment.status === "Completed"
+                    ? "bg-emerald-400"
+                    : overdue
+                      ? "bg-red-400"
+                      : "bg-[var(--hub-accent)]"
+                )}
+                style={{ width: `${assignment.progress}%` }}
+              />
             </div>
           </div>
         )
@@ -1277,9 +1424,11 @@ function AssignmentsWidget({
 }
 
 function NotesWidget({
+  limit,
   notes,
   settings,
 }: {
+  limit: number
   notes: ReturnType<typeof useNotes>["notes"]
   settings: DashboardWidgetSettings
 }) {
@@ -1288,21 +1437,23 @@ function NotesWidget({
     .filter((note) => (view === "favorites" ? note.favorite : true))
     .slice()
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
-    .slice(0, 5)
+    .slice(0, limit)
 
   if (visibleNotes.length === 0) {
     return <MiniEmpty icon={NotebookPen} text="No notes match this view." />
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid gap-3">
       {visibleNotes.map((note) => (
         <div
           key={note.id}
-          className="rounded-xl border border-white/10 bg-white/[0.035] p-3"
+          className="hub-glass-control rounded-2xl p-3"
         >
-          <div className="flex items-center justify-between gap-3">
-            <p className="truncate font-medium text-zinc-100">{note.title}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 break-words font-medium leading-5 text-zinc-100">
+              {note.title}
+            </p>
             <Badge tone={note.pinned || note.favorite ? "blue" : "zinc"}>
               {note.category}
             </Badge>
@@ -1316,44 +1467,58 @@ function NotesWidget({
   )
 }
 
-function TimerWidget({
-  pause,
-  progress,
-  remainingSeconds,
-  reset,
-  setMode,
-  settings,
-  start,
-  state,
-}: {
-  pause: () => void
-  progress: number
-  remainingSeconds: number
-  reset: () => void
-  setMode: ReturnType<typeof usePomodoro>["setMode"]
-  settings: DashboardWidgetSettings
-  start: () => void
-  state: ReturnType<typeof usePomodoro>["state"]
-  totalSeconds: number
-}) {
+function TimerWidget({ settings }: { settings: DashboardWidgetSettings }) {
+  const {
+    pause,
+    progress,
+    remainingSeconds,
+    reset,
+    setMode,
+    start,
+    state,
+  } = useSharedPomodoro()
   const full = (settings.timerView ?? "compact") === "full"
+  const circumference = 2 * Math.PI * 54
+  const progressOffset = circumference * (1 - progress)
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-center">
-      <p className="text-5xl font-semibold tracking-normal text-blue-100">
-        {formatSeconds(remainingSeconds)}
-      </p>
-      <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+    <div className="hub-glass-control rounded-[1.5rem] p-4 text-center sm:p-5">
+      <div className="relative mx-auto grid size-40 place-items-center rounded-full border border-white/10 bg-black/20 shadow-inner shadow-black/40">
+        <svg className="absolute size-36 -rotate-90" viewBox="0 0 132 132" aria-hidden="true">
+          <circle
+            cx="66"
+            cy="66"
+            r="54"
+            className="stroke-white/10"
+            fill="none"
+            strokeWidth="10"
+          />
+          <circle
+            cx="66"
+            cy="66"
+            r="54"
+            className="stroke-[var(--hub-accent)] transition-[stroke-dashoffset] duration-200 ease-out"
+            fill="none"
+            strokeLinecap="round"
+            strokeWidth="10"
+            strokeDasharray={circumference}
+            strokeDashoffset={progressOffset}
+          />
+        </svg>
+        <div className="relative grid gap-1">
+          <p className="break-words text-3xl font-semibold tracking-normal text-[var(--hub-text)] sm:text-4xl">
+            {formatSeconds(remainingSeconds)}
+          </p>
+          <p className="text-[0.65rem] font-medium uppercase leading-4 tracking-[0.18em] text-[var(--hub-muted-text)]">
+            {pomodoroModeLabels[state.mode]}
+          </p>
+        </div>
+      </div>
+      <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[var(--hub-muted-text)]">
         {state.isRunning ? "Running" : "Paused"} - {state.sessionCount} sessions
       </p>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-        <div
-          className="h-full rounded-full bg-blue-400 transition-all"
-          style={{ width: `${Math.round(progress * 100)}%` }}
-        />
-      </div>
       {full ? (
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {(["focus", "short-break", "long-break"] as const).map((mode) => (
             <Button
               key={mode}
@@ -1363,8 +1528,8 @@ function TimerWidget({
               className={cn(
                 "h-9 rounded-xl",
                 state.mode === mode
-                  ? "bg-blue-500/85 text-white"
-                  : "border border-white/10 bg-white/[0.04] text-zinc-100"
+                  ? "hub-accent-bg"
+                  : "hub-glass-control text-zinc-100"
               )}
             >
               {pomodoroModeLabels[mode]}
@@ -1372,11 +1537,11 @@ function TimerWidget({
           ))}
         </div>
       ) : null}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <Button
           type="button"
           onClick={state.isRunning ? pause : start}
-          className="h-10 rounded-xl bg-blue-500/85 text-white hover:bg-blue-400"
+          className="h-10 rounded-xl"
         >
           {state.isRunning ? "Pause" : "Start"}
         </Button>
@@ -1404,24 +1569,24 @@ function CalculatorWidget({
   const latestCalculation = history[0]
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4">
-      <div className="rounded-xl border border-blue-400/20 bg-[#060913] p-4 text-right shadow-inner shadow-black">
+    <div className="hub-glass-control grid gap-3 rounded-2xl p-4">
+      <div className="rounded-xl border border-[var(--hub-accent-border)] bg-black/25 p-4 text-right shadow-inner shadow-black/40">
         <p className="text-sm text-zinc-500">
           {latestCalculation?.expression || "No expression"}
         </p>
-        <p className="mt-2 break-all text-3xl font-semibold text-blue-100">
+        <p className="mt-2 break-all text-2xl font-semibold text-[var(--hub-text)] sm:text-3xl">
           {latestCalculation?.result || "0"}
         </p>
       </div>
       {expanded ? (
-        <div className="space-y-2">
+        <div className="grid gap-2">
           {history.slice(0, 4).map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-3 py-2 text-sm"
+              className="hub-glass-control flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
             >
-              <span className="min-w-0 truncate text-zinc-400">{item.expression}</span>
-              <span className="font-medium text-zinc-100">{item.result}</span>
+              <span className="min-w-0 break-all text-zinc-400">{item.expression}</span>
+              <span className="break-all font-medium text-zinc-100">{item.result}</span>
             </div>
           ))}
         </div>
@@ -1433,12 +1598,14 @@ function CalculatorWidget({
 function CalendarWidget({
   assignments,
   events,
+  limit,
   now,
   schedules,
   settings,
 }: {
   assignments: Assignment[]
   events: CalendarEvent[]
+  limit: number
   now: Date | null
   schedules: ScheduleItem[]
   settings: DashboardWidgetSettings
@@ -1460,21 +1627,18 @@ function CalendarWidget({
   }
 
   return (
-    <div className="space-y-3">
-      {items.slice(0, 6).map((item) => (
-        <div
-          key={item.id}
-          className="rounded-xl border border-white/10 bg-white/[0.035] p-3"
-        >
-          <div className="flex items-center gap-2">
+    <div className="grid gap-3">
+      {items.slice(0, limit).map((item) => (
+        <div key={item.id} className="hub-glass-control grid gap-1.5 rounded-2xl p-3">
+          <div className="flex items-start gap-2">
             <span
-              className="size-2.5 rounded-full"
+              className="mt-1 size-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: item.color }}
               aria-hidden="true"
             />
-            <p className="truncate font-medium text-zinc-100">{item.title}</p>
+            <p className="min-w-0 break-words font-medium text-zinc-100">{item.title}</p>
           </div>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="break-words text-sm leading-5 text-zinc-500">
             {item.category} - {item.dateLabel}
             {item.startTime ? ` - ${formatTime(item.startTime)}` : ""}
           </p>
@@ -1488,13 +1652,12 @@ function QuickActionsWidget({
   actions,
   customizeMode,
   moveQuickAction,
-  startTimer,
 }: {
   actions: QuickActionId[]
   customizeMode: boolean
   moveQuickAction: (draggedId: QuickActionId, targetId: QuickActionId) => void
-  startTimer: () => void
 }) {
+  const { start: startTimer } = useSharedPomodoro()
   const orderedActions = actions
     .map((actionId) => QUICK_ACTIONS.find((action) => action.id === actionId))
     .filter((action): action is (typeof QUICK_ACTIONS)[number] => Boolean(action))
@@ -1535,11 +1698,11 @@ function QuickActionButton({
   const content = (
     <>
       {customizeMode ? <GripVertical className="size-4" aria-hidden="true" /> : null}
-      <span className="truncate">{action.label}</span>
+      <span className="min-w-0 break-words leading-5">{action.label}</span>
     </>
   )
   const className = cn(
-    "flex h-11 items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-sm font-medium text-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-500/15",
+    "hub-glass-control flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-sm font-medium text-[var(--hub-text)] transition-[color,background-color,border-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)] hover:bg-[var(--hub-accent-soft)]",
     isDragging && "scale-95 opacity-70"
   )
 
@@ -1582,8 +1745,130 @@ function StatWidget({
 
   return (
     <div>
-      <p className="break-words text-3xl font-semibold text-zinc-50">{stat.value}</p>
+      <p className="break-words text-2xl font-semibold text-zinc-50 sm:text-3xl">{stat.value}</p>
       {stat.detail ? <p className="mt-2 text-sm text-zinc-500">{stat.detail}</p> : null}
+    </div>
+  )
+}
+
+function CurrentTimeWidget() {
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    const timeout = window.setTimeout(tick, 0)
+    const interval = window.setInterval(tick, 1000)
+
+    return () => {
+      window.clearTimeout(timeout)
+      window.clearInterval(interval)
+    }
+  }, [])
+
+  return (
+    <div>
+      <p className="break-words text-2xl font-semibold text-zinc-50 sm:text-3xl">
+        {now
+          ? now.toLocaleTimeString(undefined, {
+              hour: "numeric",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : "Loading time"}
+      </p>
+    </div>
+  )
+}
+
+function DeadlinesWidget({
+  assignments,
+  limit,
+}: {
+  assignments: Assignment[]
+  limit: number
+}) {
+  if (assignments.length === 0) {
+    return <MiniEmpty icon={Clock} text="No active deadlines in the next seven days." />
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <p className="text-3xl font-semibold text-zinc-50">{assignments.length}</p>
+        <p className="pb-1 text-xs text-[var(--hub-muted-text)]">Due within 7 days</p>
+      </div>
+      <div className="grid gap-2">
+        {assignments.slice(0, limit).map((assignment) => (
+          <div
+            key={assignment.id}
+            className="hub-glass-control flex items-start justify-between gap-3 rounded-xl px-3 py-2.5"
+          >
+            <div className="grid min-w-0 gap-1">
+              <p className="break-words text-sm font-medium text-zinc-100">
+                {assignment.title}
+              </p>
+              <p className="break-words text-xs leading-4 text-[var(--hub-muted-text)]">
+                {assignment.subject || "Assignment"}
+              </p>
+            </div>
+            <span className="shrink-0 text-xs font-medium text-[var(--hub-accent)]">
+              {formatDateLabel(assignment.dueDate, { year: undefined })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ClassesTodayWidget({
+  limit,
+  now,
+  schedules,
+}: {
+  limit: number
+  now: Date | null
+  schedules: ScheduleItem[]
+}) {
+  if (!now) {
+    return <MiniEmpty icon={CalendarClock} text="Loading today's classes." />
+  }
+
+  const classes = schedules
+    .filter((schedule) => schedule.day === getWeekday(now))
+    .slice()
+    .sort((a, b) => compareTimes(a.startTime, b.startTime))
+
+  if (classes.length === 0) {
+    return <MiniEmpty icon={CalendarClock} text="No classes scheduled today." />
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <p className="text-3xl font-semibold text-zinc-50">{classes.length}</p>
+        <p className="pb-1 text-xs text-[var(--hub-muted-text)]">Classes today</p>
+      </div>
+      <div className="grid gap-2">
+        {classes.slice(0, limit).map((schedule) => (
+          <div
+            key={schedule.id}
+            className="hub-glass-control flex items-start justify-between gap-3 rounded-xl px-3 py-2.5"
+          >
+            <div className="grid min-w-0 gap-1">
+              <p className="break-words text-sm font-medium text-zinc-100">
+                {schedule.subject}
+              </p>
+              <p className="break-words text-xs leading-4 text-[var(--hub-muted-text)]">
+                {schedule.room || schedule.instructor || "Class schedule"}
+              </p>
+            </div>
+            <span className="shrink-0 text-xs font-medium text-[var(--hub-accent)]">
+              {formatTime(schedule.startTime)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1601,7 +1886,10 @@ function MiniEmpty({ icon, text }: { icon: LucideIcon; text: string }) {
   )
 }
 
-function getStat(kind: DashboardWidgetKind, context: DashboardContext) {
+function getStat(
+  kind: DashboardWidgetKind,
+  context: DashboardContext
+): { detail?: string; value: number | string } {
   if (kind === "current-date") {
     return {
       value: context.now
@@ -1612,18 +1900,6 @@ function getStat(kind: DashboardWidgetKind, context: DashboardContext) {
             year: "numeric",
           })
         : "Loading date",
-    }
-  }
-
-  if (kind === "current-time") {
-    return {
-      value: context.now
-        ? context.now.toLocaleTimeString(undefined, {
-            hour: "numeric",
-            minute: "2-digit",
-            second: "2-digit",
-          })
-        : "Loading time",
     }
   }
 
@@ -1639,21 +1915,23 @@ function getStat(kind: DashboardWidgetKind, context: DashboardContext) {
     return { value: context.activeAssignments.length }
   }
 
-  if (kind === "classes-today") {
-    if (!context.now) {
-      return { value: "Loading" }
-    }
+  return { value: context.activeAssignments.length }
+}
 
-    const today = getWeekday(context.now)
-    return {
-      value: context.schedules.filter((item) => item.day === today).length,
-    }
+function getWidgetItemLimit(widget: DashboardWidget) {
+  if (widget.colSpan >= 8 || widget.rowSpan >= 6) {
+    return 8
   }
 
-  return {
-    detail: "Due in the next 7 days",
-    value: context.upcomingDeadlines.length,
+  if (widget.colSpan >= 5 || widget.rowSpan >= 4) {
+    return 5
   }
+
+  if (widget.colSpan <= 3 || widget.rowSpan <= 2) {
+    return 2
+  }
+
+  return 4
 }
 
 function getCalendarPreviewItems({
@@ -1733,8 +2011,18 @@ function useDashboardColumns() {
         return
       }
 
+      if (window.innerWidth < 1024) {
+        setColumns(4)
+        return
+      }
+
       if (window.innerWidth < 1280) {
         setColumns(6)
+        return
+      }
+
+      if (window.innerWidth >= 1760) {
+        setColumns(16)
         return
       }
 
@@ -1759,8 +2047,26 @@ function readFileAsDataUrl(file: File) {
   })
 }
 
-function normalizeColorInput(color: string) {
-  return /^#[0-9a-f]{6}$/i.test(color) ? color : "#3b82f6"
+function normalizeColorInput(color: string, fallback = "#3b82f6") {
+  return isValidHexColor(color) ? color : fallback
+}
+
+function getDashboardGreeting(now: Date | null) {
+  const hour = now?.getHours() ?? 12
+
+  if (hour < 12) {
+    return "Good morning, ready to study?"
+  }
+
+  if (hour < 18) {
+    return "Good afternoon, keep the momentum."
+  }
+
+  return "Good evening, plan the next win."
+}
+
+function isValidHexColor(color: string) {
+  return /^#[0-9a-f]{6}$/i.test(color)
 }
 
 function isSameMonth(dateKey: string, date: Date) {

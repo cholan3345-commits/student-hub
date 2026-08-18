@@ -1,5 +1,6 @@
 export const STORAGE_KEYS = {
   assignments: "student-hub:assignments",
+  aiChatHistory: "student-hub:ai-chat-history",
   calculatorHistory: "student-hub:calculator-history",
   calendarEvents: "student-hub:calendar-events",
   dashboardLayouts: "student-hub:dashboard-layouts",
@@ -7,6 +8,7 @@ export const STORAGE_KEYS = {
   grades: "student-hub:grades",
   habits: "student-hub:habits",
   notes: "student-hub:notes",
+  notificationReadIds: "student-hub:notification-read-ids",
   pomodoroPreferences: "student-hub:pomodoro-preferences",
   pomodoroState: "student-hub:pomodoro-state",
   profile: "student-hub:profile",
@@ -76,13 +78,14 @@ export const THEME_MODES = [
 export type ThemeMode = (typeof THEME_MODES)[number]
 
 export const ACCENT_COLORS = [
-  { name: "Blue", value: "#3b82f6" },
   { name: "Purple", value: "#8b5cf6" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Cyan", value: "#06b6d4" },
   { name: "Green", value: "#10b981" },
-  { name: "Emerald", value: "#059669" },
-  { name: "Rose", value: "#f43f5e" },
-  { name: "Amber", value: "#f59e0b" },
-  { name: "Sky", value: "#0ea5e9" },
+  { name: "Yellow", value: "#eab308" },
+  { name: "Orange", value: "#f97316" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Pink", value: "#ec4899" },
 ] as const
 
 export type AccentColor = string

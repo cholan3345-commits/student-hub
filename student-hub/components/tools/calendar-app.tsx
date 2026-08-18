@@ -248,7 +248,7 @@ export function CalendarApp() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="submit"
-                  className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+                  className="h-10 rounded-xl px-4"
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   {editingId ? "Save Changes" : "Add Event"}
@@ -270,19 +270,20 @@ export function CalendarApp() {
 
         <div className="grid gap-4">
           <Card>
-            <CardContent className="flex flex-col gap-4 pt-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-2">
+            <CardContent className="flex flex-col gap-4 pt-4 sm:pt-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="grid w-full min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 lg:w-auto lg:min-w-80">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-lg"
                   onClick={() => moveCalendar(-1)}
                   aria-label="Previous date range"
+                  className="size-10 shrink-0 rounded-xl"
                 >
                   <ChevronLeft className="size-4" aria-hidden="true" />
                 </Button>
-                <div className="min-w-0">
-                  <p className="text-base font-semibold text-zinc-50">
+                <div className="grid min-w-0 gap-1 text-center">
+                  <p className="break-words text-base font-semibold leading-6 text-zinc-50">
                     {view === "Monthly"
                       ? getCurrentMonthLabel(selected)
                       : view === "Weekly"
@@ -291,7 +292,9 @@ export function CalendarApp() {
                             weekday: "long",
                           })}
                   </p>
-                  <p className="text-sm text-zinc-500">Selected {formatDateLabel(selectedDate)}</p>
+                  <p className="break-words text-sm leading-5 text-zinc-500">
+                    Selected {formatDateLabel(selectedDate)}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -299,6 +302,7 @@ export function CalendarApp() {
                   size="icon-lg"
                   onClick={() => moveCalendar(1)}
                   aria-label="Next date range"
+                  className="size-10 shrink-0 rounded-xl"
                 >
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </Button>
@@ -313,9 +317,7 @@ export function CalendarApp() {
                     onClick={() => setViewOverride(option)}
                     className={cn(
                       "h-10 rounded-xl border border-white/10 px-4",
-                      view === option
-                        ? "bg-blue-500/85 text-white hover:bg-blue-400"
-                        : "bg-white/[0.04] text-zinc-100"
+                      view === option ? "hub-accent-bg" : "hub-glass-control text-zinc-100"
                     )}
                   >
                     {option}
@@ -419,13 +421,13 @@ function MonthView({
 }) {
   return (
     <Card>
-      <CardContent className="pt-5">
-        <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium uppercase text-zinc-500">
+      <CardContent className="pt-4 sm:pt-5">
+        <div className="grid grid-cols-7 gap-1 text-center text-[0.65rem] font-medium uppercase text-zinc-500 sm:gap-2 sm:text-xs">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-2">
+        <div className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
           {monthDays.map((date) => {
             const key = getDateKey(date)
             const agenda = getAgendaForDate({ assignments, date, events, schedules })
@@ -436,24 +438,24 @@ function MonthView({
                 type="button"
                 onClick={() => onSelect(key)}
                 className={cn(
-                  "min-h-24 rounded-2xl border border-white/10 bg-white/[0.025] p-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
-                  key === todayKey && "border-blue-400/40",
-                  key === selectedDate && "bg-blue-500/[0.095]"
+                  "hub-glass-control grid min-h-20 min-w-0 content-start gap-2 rounded-xl p-1.5 text-left transition-[color,background-color,border-color,box-shadow] duration-200 ease-out hover:border-[var(--hub-accent-border)] hover:bg-[var(--hub-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-accent-ring)] sm:min-h-24 sm:rounded-2xl sm:p-2",
+                  key === todayKey && "border-[var(--hub-accent-border)]",
+                  key === selectedDate && "bg-[var(--hub-accent-soft)]"
                 )}
               >
                 <span
                   className={cn(
                     "inline-flex size-7 items-center justify-center rounded-lg text-sm font-semibold text-zinc-300",
-                    key === todayKey && "bg-blue-500/80 text-white"
+                    key === todayKey && "hub-accent-bg"
                   )}
                 >
                   {date.getDate()}
                 </span>
-                <div className="mt-2 grid gap-1">
+                <div className="grid gap-1">
                   {agenda.slice(0, 3).map((item) => (
                     <span
                       key={item.id}
-                      className="truncate rounded-md px-1.5 py-1 text-[0.68rem] text-zinc-100"
+                      className="line-clamp-2 break-words rounded-md px-1.5 py-1 text-[0.65rem] leading-4 text-zinc-100 sm:text-[0.68rem]"
                       style={{ backgroundColor: `${item.color}33` }}
                     >
                       {item.title}
@@ -503,15 +505,18 @@ function WeekView({
             type="button"
             onClick={() => onSelect(key)}
             className={cn(
-              "rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
-              key === selectedDate && "border-blue-400/40 bg-blue-500/[0.08]",
-              key === todayKey && "border-blue-400/40"
+              "hub-glass-control rounded-2xl p-4 text-left shadow-xl shadow-black/20 transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-accent-ring)]",
+              key === selectedDate &&
+                "border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)]",
+              key === todayKey && "border-[var(--hub-accent-border)]"
             )}
           >
-            <p className="text-sm font-semibold text-zinc-50">
-              {date.toLocaleDateString(undefined, { weekday: "short" })}
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">{formatDateLabel(key)}</p>
+            <div className="grid gap-1">
+              <p className="text-sm font-semibold leading-5 text-zinc-50">
+                {date.toLocaleDateString(undefined, { weekday: "short" })}
+              </p>
+              <p className="text-xs leading-4 text-zinc-500">{formatDateLabel(key)}</p>
+            </div>
             <div className="mt-4 grid gap-2">
               {agenda.length > 0 ? (
                 agenda.slice(0, 4).map((item) => <AgendaPill key={item.id} item={item} />)
@@ -564,33 +569,33 @@ function DayView({
                   className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="grid min-w-0 gap-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
                           className="size-3 rounded-full"
                           style={{ backgroundColor: item.color }}
                           aria-hidden="true"
                         />
-                        <h3 className="truncate text-sm font-semibold text-zinc-50">
+                        <h3 className="break-words text-sm font-semibold text-zinc-50">
                           {item.title}
                         </h3>
                         <Badge tone={item.source === "assignment" ? "yellow" : "zinc"}>
                           {item.category}
                         </Badge>
                       </div>
-                      <p className="mt-2 text-sm text-zinc-500">
+                      <p className="text-sm leading-5 text-zinc-500">
                         {item.startTime
                           ? `${formatTime(item.startTime)} - ${formatTime(item.endTime)}`
                           : "All day"}
                       </p>
                       {item.description ? (
-                        <p className="mt-2 text-sm leading-6 text-zinc-400">
+                        <p className="break-words text-sm leading-6 text-zinc-400">
                           {item.description}
                         </p>
                       ) : null}
                     </div>
                     {event ? (
-                      <div className="flex shrink-0 gap-1">
+                      <div className="flex shrink-0 gap-1.5">
                         <Button
                           type="button"
                           variant="ghost"
@@ -626,7 +631,7 @@ function DayView({
 function AgendaPill({ item }: { item: DayAgendaItem }) {
   return (
     <span
-      className="block truncate rounded-lg px-2 py-1.5 text-xs text-zinc-100"
+      className="block break-words rounded-lg px-2 py-1.5 text-xs leading-5 text-zinc-100"
       style={{ backgroundColor: `${item.color}33` }}
     >
       {item.startTime ? `${formatTime(item.startTime)} - ` : ""}

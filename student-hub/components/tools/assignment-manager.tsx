@@ -269,7 +269,7 @@ export function AssignmentManager() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="submit"
-                  className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+                  className="h-10 rounded-xl px-4"
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   {editingId ? "Save Changes" : "Add Assignment"}
@@ -291,7 +291,7 @@ export function AssignmentManager() {
 
         <div className="grid gap-4">
           <Card>
-            <CardContent className="pt-5">
+            <CardContent className="pt-4 sm:pt-5">
               <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_12rem]">
                 <Input
                   value={query}
@@ -412,58 +412,64 @@ function AssignmentCard({
   return (
     <Card
       className={cn(
-        "transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40",
+        "transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]",
         overdue && "border-red-400/30 bg-red-500/[0.055]",
         completed && "border-emerald-400/30 bg-emerald-500/[0.055]"
       )}
     >
-      <CardContent className="pt-5">
+      <CardContent className="pt-4 sm:pt-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-zinc-50">
-                {assignment.title}
-              </h3>
-              <Badge
-                tone={
-                  completed
-                    ? "green"
-                    : overdue
-                      ? "red"
-                      : assignment.priority === "High"
-                        ? "yellow"
-                        : "zinc"
-                }
-              >
-                {completed ? "Completed" : overdue ? "Overdue" : assignment.priority}
-              </Badge>
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="break-words text-base font-semibold text-zinc-50">
+                  {assignment.title}
+                </h3>
+                <Badge
+                  tone={
+                    completed
+                      ? "green"
+                      : overdue
+                        ? "red"
+                        : assignment.priority === "High"
+                          ? "yellow"
+                          : "zinc"
+                  }
+                >
+                  {completed ? "Completed" : overdue ? "Overdue" : assignment.priority}
+                </Badge>
+              </div>
+              <p className="break-words text-sm leading-5 text-zinc-400">
+                {assignment.subject || "No subject"} - Due{" "}
+                {formatDateLabel(assignment.dueDate)}
+              </p>
             </div>
-            <p className="mt-2 text-sm text-zinc-400">
-              {assignment.subject || "No subject"} - Due{" "}
-              {formatDateLabel(assignment.dueDate)}
-            </p>
             {assignment.description ? (
-              <p className="mt-3 text-sm leading-6 text-zinc-500">
+              <p className="mt-3 break-words text-sm leading-6 text-zinc-500">
                 {assignment.description}
               </p>
             ) : null}
             <div className="mt-4">
-              <div className="mb-2 flex justify-between text-xs text-zinc-500">
+              <div className="mb-2 flex justify-between gap-3 text-xs text-zinc-500">
                 <span>{assignment.status}</span>
                 <span>{assignment.progress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-all",
-                    completed ? "bg-emerald-400" : overdue ? "bg-red-400" : "bg-blue-400"
+                    "h-full rounded-full transition-[width,background-color] duration-200 ease-out",
+                    completed
+                      ? "bg-emerald-400"
+                      : overdue
+                        ? "bg-red-400"
+                        : "bg-[var(--hub-accent)]"
                   )}
                   style={{ width: `${assignment.progress}%` }}
                 />
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1 lg:justify-end">
+          <div className="flex flex-wrap gap-1.5 lg:justify-end">
             <Button type="button" variant="ghost" size="icon-lg" onClick={onToggleComplete} aria-label="Toggle assignment complete">
               <CheckCircle2 className="size-4" aria-hidden="true" />
             </Button>
@@ -486,7 +492,7 @@ function AssignmentCard({
           </div>
         </div>
         {assignment.notes ? (
-          <p className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
+          <p className="mt-4 break-words rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
             {assignment.notes}
           </p>
         ) : null}

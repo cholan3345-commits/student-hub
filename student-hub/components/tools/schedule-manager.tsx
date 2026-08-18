@@ -247,7 +247,7 @@ export function ScheduleManager() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="submit"
-                  className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+                  className="h-10 rounded-xl px-4"
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   {editingId ? "Save Changes" : "Add Schedule"}
@@ -269,7 +269,7 @@ export function ScheduleManager() {
 
         <div className="grid gap-4">
           <Card>
-            <CardContent className="pt-5">
+            <CardContent className="pt-4 sm:pt-5">
               <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto] lg:items-center">
                 <Input
                   value={query}
@@ -303,14 +303,14 @@ export function ScheduleManager() {
                     </option>
                   ))}
                 </Select>
-                <div className="flex rounded-xl border border-white/10 bg-white/[0.04] p-1">
+                <div className="flex gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
                   <Button
                     type="button"
                     variant={view === "cards" ? "default" : "ghost"}
                     size="icon-lg"
                     onClick={() => setView("cards")}
                     aria-label="Card view"
-                    className={cn(view === "cards" && "bg-blue-500/85 text-white")}
+                    className={cn(view === "cards" && "hub-accent-bg")}
                   >
                     <Grid2X2 className="size-4" aria-hidden="true" />
                   </Button>
@@ -320,7 +320,7 @@ export function ScheduleManager() {
                     size="icon-lg"
                     onClick={() => setView("table")}
                     aria-label="Table view"
-                    className={cn(view === "table" && "bg-blue-500/85 text-white")}
+                    className={cn(view === "table" && "hub-accent-bg")}
                   >
                     <Table2 className="size-4" aria-hidden="true" />
                   </Button>
@@ -407,33 +407,35 @@ function ScheduleCard({
   return (
     <Card
       className={cn(
-        "transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40",
-        isToday && "border-blue-400/40 bg-blue-500/[0.075]"
+        "transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]",
+        isToday && "border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)]"
       )}
     >
-      <CardContent className="pt-5">
+      <CardContent className="pt-4 sm:pt-5">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
+          <div className="grid min-w-0 flex-1 gap-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="size-3 rounded-full"
                 style={{ backgroundColor: item.color }}
                 aria-hidden="true"
               />
-              <h3 className="truncate text-base font-semibold text-zinc-50">
+              <h3 className="break-words text-base font-semibold text-zinc-50">
                 {item.subject}
               </h3>
               {isToday ? <Badge tone="blue">Today</Badge> : null}
             </div>
-            <p className="mt-2 text-sm text-zinc-400">
-              {item.day} - {formatTime(item.startTime)} - {formatTime(item.endTime)}
-            </p>
-            <p className="mt-2 text-sm text-zinc-500">
-              {[item.room, item.instructor].filter(Boolean).join(" - ") ||
-                "No room or instructor"}
-            </p>
+            <div className="grid gap-1.5 text-sm leading-5">
+              <p className="break-words text-zinc-400">
+                {item.day} - {formatTime(item.startTime)} - {formatTime(item.endTime)}
+              </p>
+              <p className="break-words text-zinc-500">
+                {[item.room, item.instructor].filter(Boolean).join(" - ") ||
+                  "No room or instructor"}
+              </p>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-1">
+          <div className="flex shrink-0 gap-1.5">
             <Button type="button" variant="ghost" size="icon-lg" onClick={onEdit} aria-label="Edit schedule">
               <Pencil className="size-4" aria-hidden="true" />
             </Button>
@@ -453,7 +455,7 @@ function ScheduleCard({
           </div>
         </div>
         {item.notes ? (
-          <p className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
+          <p className="mt-4 break-words rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
             {item.notes}
           </p>
         ) : null}
@@ -477,14 +479,56 @@ function ScheduleTable({
 }) {
   return (
     <Card>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
+      <div className="grid gap-3 p-4 md:hidden">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={cn(
+              "rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-zinc-300",
+              item.day === today &&
+                "border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)] text-[var(--hub-text)]"
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid min-w-0 gap-1.5">
+                <p className="break-words font-medium text-zinc-50">{item.subject}</p>
+                <p className="text-zinc-500">
+                  {item.day} - {formatTime(item.startTime)} - {formatTime(item.endTime)}
+                </p>
+                <p className="break-words text-zinc-500">
+                  {[item.room, item.instructor].filter(Boolean).join(" - ") || "-"}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Button type="button" variant="ghost" size="icon-lg" onClick={() => onEdit(item)} aria-label="Edit schedule">
+                <Pencil className="size-4" aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon-lg" onClick={() => onDuplicate(item)} aria-label="Duplicate schedule">
+                <Copy className="size-4" aria-hidden="true" />
+              </Button>
+              <ConfirmButton
+                type="button"
+                variant="destructive"
+                size="icon-lg"
+                confirmMessage="Delete this schedule item?"
+                onConfirm={() => onDelete(item)}
+                aria-label="Delete schedule"
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+              </ConfirmButton>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-white/10 text-xs uppercase text-zinc-500">
             <tr>
               <th className="px-4 py-3 font-medium">Subject</th>
               <th className="px-4 py-3 font-medium">Day</th>
               <th className="px-4 py-3 font-medium">
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1.5">
                   Time <ArrowUpDown className="size-3" aria-hidden="true" />
                 </span>
               </th>
@@ -499,7 +543,7 @@ function ScheduleTable({
                 key={item.id}
                 className={cn(
                   "border-b border-white/5 text-zinc-300",
-                  item.day === today && "bg-blue-500/[0.07] text-blue-100"
+                  item.day === today && "bg-[var(--hub-accent-soft)] text-[var(--hub-text)]"
                 )}
               >
                 <td className="px-4 py-3">
@@ -519,7 +563,7 @@ function ScheduleTable({
                 <td className="px-4 py-3">{item.room || "-"}</td>
                 <td className="px-4 py-3">{item.instructor || "-"}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     <Button type="button" variant="ghost" size="icon-lg" onClick={() => onEdit(item)} aria-label="Edit schedule">
                       <Pencil className="size-4" aria-hidden="true" />
                     </Button>

@@ -1,0 +1,36 @@
+
+> student-hub@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+✓ Ready in 1344ms
+✓ Running next.config.ts took 110ms
+Creating turbopack project {
+  dir: 'C:\\Users\\Cholan\\OneDrive\\Desktop\\Website\\student-hub',
+  testMode: true
+}
+
+ GET / 200 in 1782ms (next.js: 813ms, application-code: 969ms)
+ GET / 200 in 1783ms (next.js: 852ms, application-code: 931ms)
+ GET / 200 in 186ms (next.js: 22ms, application-code: 164ms)
+ GET /schedule 200 in 197ms (next.js: 67ms, application-code: 130ms)
+ GET /calendar 200 in 195ms (next.js: 63ms, application-code: 131ms)
+ GET /assignments 200 in 226ms (next.js: 60ms, application-code: 166ms)
+ GET /study-timer 200 in 175ms (next.js: 61ms, application-code: 114ms)
+ GET /calculator 200 in 187ms (next.js: 62ms, application-code: 125ms)
+ GET /notes 200 in 173ms (next.js: 67ms, application-code: 106ms)
+ GET /files 200 in 165ms (next.js: 66ms, application-code: 99ms)
+ GET /grades 200 in 167ms (next.js: 56ms, application-code: 110ms)
+ GET /habit-tracker 200 in 154ms (next.js: 57ms, application-code: 97ms)
+ GET /ai 200 in 191ms (next.js: 68ms, application-code: 123ms)
+ GET /ai-study-assistant 200 in 172ms (next.js: 57ms, application-code: 115ms)
+ GET /ai-notes 200 in 155ms (next.js: 55ms, application-code: 100ms)
+ GET /ai-quiz-generator 200 in 153ms (next.js: 56ms, application-code: 97ms)
+ GET /ai-flashcards 200 in 163ms (next.js: 60ms, application-code: 103ms)
+ GET /ai-study-planner 200 in 160ms (next.js: 56ms, application-code: 104ms)
+ GET /ai-pdf-assistant 200 in 159ms (next.js: 59ms, application-code: 100ms)
+ GET /profile 200 in 159ms (next.js: 58ms, application-code: 101ms)
+ GET /settings 200 in 171ms (next.js: 60ms, application-code: 111ms)
+ GET / 200 in 149ms (next.js: 10ms, application-code: 139ms)

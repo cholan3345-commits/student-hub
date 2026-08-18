@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 
-import { navigationItems } from "@/components/navigation"
+import { aiToolItems, navigationItems } from "@/components/navigation"
 import {
   STORAGE_KEYS,
   type BackgroundPreferences,
@@ -21,6 +21,7 @@ export const NAVBAR_CONTROLS: Array<{ id: NavbarControlId; label: string }> = [
 
 const DEFAULT_NAVBAR_ORDER = NAVBAR_CONTROLS.map((control) => control.id)
 const DEFAULT_SIDEBAR_ORDER = navigationItems.map((item) => item.href)
+const LEGACY_AI_HREFS = aiToolItems.map((item) => item.href)
 
 const defaultWorkspacePreferences: WorkspacePreferences = {
   background: {
@@ -174,8 +175,14 @@ export function useWorkspacePreferences() {
 export function normalizeWorkspacePreferences(
   preferences: WorkspacePreferences
 ): WorkspacePreferences {
-  const sidebarOrder = mergeOrder(preferences.sidebar?.order, DEFAULT_SIDEBAR_ORDER)
+  const sidebarOrder = mergeOrder(
+    migrateAiSidebarOrder(preferences.sidebar?.order),
+    DEFAULT_SIDEBAR_ORDER
+  )
   const navbarOrder = mergeOrder(preferences.navbar?.order, DEFAULT_NAVBAR_ORDER)
+  const legacyAiWasPinned = (preferences.sidebar?.pinned ?? []).some((href) =>
+    LEGACY_AI_HREFS.includes(href)
+  )
 
   return {
     background: {
@@ -196,12 +203,32 @@ export function normalizeWorkspacePreferences(
         (href) => href !== "/" && DEFAULT_SIDEBAR_ORDER.includes(href)
       ),
       order: sidebarOrder,
-      pinned: (preferences.sidebar?.pinned ?? []).filter((href) =>
-        DEFAULT_SIDEBAR_ORDER.includes(href)
-      ),
+      pinned: [
+        ...(preferences.sidebar?.pinned ?? []).filter((href) =>
+          DEFAULT_SIDEBAR_ORDER.includes(href)
+        ),
+        ...(legacyAiWasPinned ? ["/ai"] : []),
+      ].filter((href, index, items) => items.indexOf(href) === index),
       width: clamp(Number(preferences.sidebar?.width ?? 256), 176, 320),
     },
   }
+}
+
+function migrateAiSidebarOrder(current: string[] | undefined) {
+  const order = current ?? []
+  const firstLegacyAiIndex = order.findIndex((href) => LEGACY_AI_HREFS.includes(href))
+  const migrated = order.filter((href) => !LEGACY_AI_HREFS.includes(href))
+
+  if (firstLegacyAiIndex < 0 || migrated.includes("/ai")) {
+    return migrated
+  }
+
+  const insertionIndex = order
+    .slice(0, firstLegacyAiIndex)
+    .filter((href) => !LEGACY_AI_HREFS.includes(href)).length
+
+  migrated.splice(insertionIndex, 0, "/ai")
+  return migrated
 }
 
 function mergeOrder<T extends string>(current: T[] | undefined, fallback: T[]) {

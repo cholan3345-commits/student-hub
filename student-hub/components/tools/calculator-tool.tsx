@@ -135,10 +135,10 @@ export function CalculatorTool() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(18rem,26rem)_1fr]">
         <Card>
-          <CardContent className="pt-5">
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <div className="mb-4 flex min-h-24 items-end justify-end overflow-hidden rounded-2xl border border-blue-400/20 bg-[#060913] p-4 text-right shadow-inner shadow-black">
-                <p className="break-all text-4xl font-semibold text-blue-100">{display}</p>
+          <CardContent className="pt-4 sm:pt-5">
+            <div className="hub-glass-control rounded-2xl p-4">
+              <div className="mb-4 flex min-h-24 items-end justify-end rounded-2xl border border-[var(--hub-accent-border)] bg-black/25 p-4 text-right shadow-inner shadow-black/40">
+                <p className="break-all text-3xl font-semibold text-[var(--hub-text)] sm:text-4xl">{display}</p>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {buttons.map((button) => {
@@ -153,9 +153,8 @@ export function CalculatorTool() {
                       onClick={() => handleButton(button)}
                       aria-label={`Calculator ${button}`}
                       className={cn(
-                        "h-14 rounded-xl text-base transition duration-200 hover:-translate-y-0.5",
-                        isOperator &&
-                          "bg-blue-500/85 text-white shadow-lg shadow-blue-950/25 hover:bg-blue-400",
+                        "min-h-12 rounded-xl text-base transition-[color,background-color,border-color,transform] duration-200 ease-out hover:-translate-y-0.5 sm:min-h-14",
+                        isOperator && "hub-accent-bg shadow-lg shadow-[var(--hub-accent-glow)]",
                         isClear &&
                           "border border-red-400/15 bg-red-500/10 text-red-200 hover:bg-red-500/20",
                         !isOperator &&
@@ -220,7 +219,7 @@ export function CalculatorTool() {
                     key={item.id}
                     type="button"
                     onClick={() => setExpression(item.result)}
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                    className="hub-glass-control rounded-2xl p-4 text-left transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-accent-ring)]"
                   >
                     <p className="break-all text-sm text-zinc-500">{item.expression}</p>
                     <p className="mt-2 break-all text-xl font-semibold text-zinc-50">
@@ -274,4 +273,3 @@ function evaluateExpression(expression: string) {
 function formatResult(value: number) {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(8)))
 }
-

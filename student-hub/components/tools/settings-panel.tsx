@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Download, Monitor, Moon, RotateCcw, Settings, Sun, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ConfirmButton } from "@/components/ui/confirm-button"
 import { Field } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"
 import { PageContainer } from "@/components/layout/page-container"
@@ -44,7 +45,26 @@ export function SettingsPanel() {
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const { settings, updateSettings } = useSettings()
   const { accentColor, setAccentColor, setTheme, theme } = useTheme()
+  const [customAccentDraft, setCustomAccentDraft] = useState({
+    source: accentColor,
+    value: accentColor,
+  })
+  const customAccent =
+    customAccentDraft.source === accentColor ? customAccentDraft.value : accentColor
   const { toast } = useToast()
+
+  function applyAccentColor(color: string) {
+    const nextColor = color.trim()
+
+    setCustomAccentDraft({
+      source: isValidHexColor(nextColor) ? nextColor.toLowerCase() : accentColor,
+      value: nextColor,
+    })
+
+    if (isValidHexColor(nextColor)) {
+      setAccentColor(nextColor)
+    }
+  }
 
   function exportData() {
     downloadJson(`student-hub-backup-${new Date().toISOString().slice(0, 10)}.json`, exportStudentHubData())
@@ -109,7 +129,7 @@ export function SettingsPanel() {
                     className={cn(
                       "h-20 flex-col rounded-2xl border border-white/10",
                       theme === option.value
-                        ? "bg-blue-500/85 text-white hover:bg-blue-400"
+                        ? "hub-accent-bg"
                         : "bg-white/[0.04] text-zinc-100"
                     )}
                   >
@@ -126,10 +146,10 @@ export function SettingsPanel() {
                   <button
                     key={color.value}
                     type="button"
-                    onClick={() => setAccentColor(color.value)}
+                    onClick={() => applyAccentColor(color.value)}
                     className={cn(
-                      "flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-zinc-200 transition hover:-translate-y-0.5 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
-                      accentColor === color.value && "border-blue-400/50 bg-blue-500/10"
+                      "hub-focus flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-zinc-200 transition-[color,background-color,border-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]",
+                      accentColor === color.value && "hub-accent-soft"
                     )}
                   >
                     <span
@@ -140,6 +160,30 @@ export function SettingsPanel() {
                     {color.name}
                   </button>
                 ))}
+              </div>
+            </Field>
+            <Field label="Custom Accent">
+              <div className="grid gap-2 sm:grid-cols-[5rem_1fr]">
+                <Input
+                  type="color"
+                  value={normalizeColorInput(customAccent, accentColor)}
+                  onChange={(event) => applyAccentColor(event.target.value)}
+                  className="h-10 w-20 p-1"
+                  aria-label="Pick custom accent color"
+                />
+                <Input
+                  value={customAccent}
+                  onChange={(event) => applyAccentColor(event.target.value)}
+                  placeholder="#8B5CF6"
+                  aria-label="Custom accent HEX value"
+                  aria-invalid={customAccent.length > 0 && !isValidHexColor(customAccent)}
+                  className={cn(
+                    "font-mono uppercase",
+                    customAccent.length > 0 &&
+                      !isValidHexColor(customAccent) &&
+                      "border-red-400/50 focus-visible:border-red-400/60 focus-visible:ring-red-500/20"
+                  )}
+                />
               </div>
             </Field>
             <Badge tone="blue">Current accent {accentColor}</Badge>
@@ -192,7 +236,7 @@ export function SettingsPanel() {
             <Button
               type="button"
               onClick={exportData}
-              className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+              className="h-10 rounded-xl px-4"
             >
               <Download className="size-4" aria-hidden="true" />
               Export JSON
@@ -240,8 +284,8 @@ export function SettingsPanel() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardContent className="flex items-center gap-3 pt-5 text-sm text-zinc-500">
-            <Settings className="size-4 text-blue-300" aria-hidden="true" />
+          <CardContent className="flex items-center gap-3 pt-4 text-sm text-zinc-500 sm:pt-5">
+            <Settings className="size-4 text-[var(--hub-accent)]" aria-hidden="true" />
             All settings and student data stay in this browser through localStorage.
           </CardContent>
         </Card>
@@ -250,3 +294,10 @@ export function SettingsPanel() {
   )
 }
 
+function normalizeColorInput(color: string, fallback = "#3b82f6") {
+  return isValidHexColor(color) ? color : fallback
+}
+
+function isValidHexColor(color: string) {
+  return /^#[0-9a-f]{6}$/i.test(color)
+}

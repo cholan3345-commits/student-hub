@@ -67,7 +67,7 @@ export function FilesManager() {
 
       <div className="grid gap-4">
         <Card>
-          <CardContent className="grid gap-3 pt-5 lg:grid-cols-[1fr_auto]">
+          <CardContent className="grid gap-3 pt-4 sm:pt-5 lg:grid-cols-[1fr_auto]">
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500"
@@ -84,7 +84,7 @@ export function FilesManager() {
             <Button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+              className="h-10 rounded-xl px-4"
             >
               <Upload className="size-4" aria-hidden="true" />
               Upload Files
@@ -139,20 +139,20 @@ function FileCard({
   onRename: (name: string) => void
 }) {
   return (
-    <Card className="transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40">
+    <Card className="transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]">
       <CardHeader>
         <div className="flex items-start gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-blue-400/25 bg-blue-500/10 text-blue-300">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)] text-[var(--hub-accent)]">
             <FileText className="size-5" aria-hidden="true" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="grid min-w-0 flex-1 gap-2">
             <Input
               value={file.name}
               onChange={(event) => onRename(event.target.value)}
               aria-label="Rename file"
               className="h-9"
             />
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="text-xs leading-4 text-zinc-500">
               {formatFileSize(file.size)} - {file.type}
             </p>
           </div>
@@ -163,7 +163,7 @@ function FileCard({
           <a
             href={file.dataUrl}
             download={file.name}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-500/85 px-4 text-xs font-medium text-white transition hover:-translate-y-0.5 hover:bg-blue-400"
+            className="hub-accent-bg inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5"
           >
             <Download className="size-4" aria-hidden="true" />
             Download

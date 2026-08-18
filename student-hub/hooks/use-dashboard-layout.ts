@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react"
 import {
   createDashboardWidget,
   createDefaultDashboardState,
+  DASHBOARD_WIDGET_DEFINITIONS,
   normalizeDashboardState,
   resizeDashboardWidget,
 } from "@/lib/dashboard"
@@ -106,12 +107,24 @@ export function useDashboardLayout() {
 
   const resizeWidget = useCallback(
     (widgetId: string, colSpan: number, rowSpan: number) => {
-      updateWidget(widgetId, (widget) => ({
-        ...widget,
-        colSpan: clamp(colSpan, 2, 12),
-        rowSpan: clamp(rowSpan, 2, 8),
-        size: "custom",
-      }))
+      updateWidget(widgetId, (widget) => {
+        const constraints = DASHBOARD_WIDGET_DEFINITIONS[widget.kind].constraints
+
+        return {
+          ...widget,
+          colSpan: clamp(
+            colSpan,
+            constraints.minColSpan,
+            constraints.maxColSpan
+          ),
+          rowSpan: clamp(
+            rowSpan,
+            constraints.minRowSpan,
+            constraints.maxRowSpan
+          ),
+          size: "custom",
+        }
+      })
     },
     [updateWidget]
   )

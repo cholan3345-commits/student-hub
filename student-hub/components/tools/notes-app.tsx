@@ -96,11 +96,11 @@ export function NotesApp() {
       <div className="grid gap-4 xl:grid-cols-[22rem_1fr]">
         <div className="grid gap-4">
           <Card>
-            <CardContent className="grid gap-3 pt-5">
+            <CardContent className="grid gap-3 pt-4 sm:pt-5">
               <Button
                 type="button"
                 onClick={createNote}
-                className="h-10 rounded-xl bg-blue-500/85 text-white hover:bg-blue-400"
+                className="h-10 rounded-xl"
               >
                 <Plus className="size-4" aria-hidden="true" />
                 Create Note
@@ -142,21 +142,24 @@ export function NotesApp() {
                   type="button"
                   onClick={() => setActiveId(note.id)}
                   className={cn(
-                    "rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left shadow-xl shadow-black/20 transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
-                    activeNote?.id === note.id && "border-blue-400/40 bg-blue-500/[0.075]"
+                    "hub-glass-control rounded-2xl p-4 text-left shadow-xl shadow-black/20 transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-accent-ring)]",
+                    activeNote?.id === note.id &&
+                      "border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)]"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-zinc-50">
+                    <div className="grid min-w-0 gap-1">
+                      <h3 className="break-words text-sm font-semibold text-zinc-50">
                         {note.title || "Untitled note"}
                       </h3>
-                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
+                      <p className="line-clamp-2 text-sm leading-6 text-zinc-500">
                         {note.content || "No content yet."}
                       </p>
                     </div>
-                    <div className="flex shrink-0 gap-1 text-zinc-500">
-                      {note.pinned ? <Pin className="size-4 text-blue-300" /> : null}
+                    <div className="flex shrink-0 gap-1.5 text-zinc-500">
+                      {note.pinned ? (
+                        <Pin className="size-4 text-[var(--hub-accent)]" />
+                      ) : null}
                       {note.favorite ? (
                         <Star className="size-4 fill-amber-300 text-amber-300" />
                       ) : null}
@@ -178,20 +181,20 @@ export function NotesApp() {
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
+                <div className="grid min-w-0 gap-1">
                   <CardTitle>Editor</CardTitle>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="text-sm leading-5 text-zinc-500">
                     Auto-saved {new Date(activeNote.updatedAt).toLocaleString()}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-lg"
                     onClick={() => togglePinned(activeNote.id)}
                     aria-label="Pin note"
-                    className={cn(activeNote.pinned && "text-blue-200")}
+                    className={cn(activeNote.pinned && "text-[var(--hub-accent)]")}
                   >
                     <Pin className="size-4" aria-hidden="true" />
                   </Button>
@@ -260,7 +263,7 @@ export function NotesApp() {
                 />
               </Field>
               <div className="grid gap-2 text-sm text-zinc-500 sm:grid-cols-2">
-                <p>Created {new Date(activeNote.createdAt).toLocaleString()}</p>
+                <p className="break-words">Created {new Date(activeNote.createdAt).toLocaleString()}</p>
                 <p className="sm:text-right">
                   Modified {new Date(activeNote.updatedAt).toLocaleString()}
                 </p>

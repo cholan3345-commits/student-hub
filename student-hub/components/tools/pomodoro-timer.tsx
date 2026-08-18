@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
-import { pomodoroModeLabels, usePomodoro } from "@/hooks/use-pomodoro"
+import { useSharedPomodoro } from "@/components/providers/pomodoro-provider"
+import { pomodoroModeLabels } from "@/hooks/use-pomodoro"
 import type { PomodoroMode } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +29,7 @@ export function PomodoroTimer() {
     start,
     state,
     updatePreferences,
-  } = usePomodoro()
+  } = useSharedPomodoro()
   const { toast } = useToast()
   const circumference = 2 * Math.PI * 92
   const progressOffset = circumference * (1 - progress)
@@ -53,7 +54,7 @@ export function PomodoroTimer() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
-              <div className="relative size-60">
+              <div className="relative size-52 rounded-full border border-white/10 bg-black/20 shadow-inner shadow-black/40 sm:size-60">
                 <svg className="size-full -rotate-90" viewBox="0 0 220 220" aria-hidden="true">
                   <circle
                     cx="110"
@@ -67,7 +68,7 @@ export function PomodoroTimer() {
                     cx="110"
                     cy="110"
                     r="92"
-                    className="stroke-blue-400 transition-all duration-500"
+                    className="stroke-[var(--hub-accent)] transition-[stroke-dashoffset] duration-500 ease-out"
                     fill="none"
                     strokeLinecap="round"
                     strokeWidth="14"
@@ -76,7 +77,7 @@ export function PomodoroTimer() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-6xl font-semibold tracking-normal text-blue-100">
+                  <p className="text-5xl font-semibold tracking-normal text-[var(--hub-text)] sm:text-6xl">
                     {formatSeconds(remainingSeconds)}
                   </p>
                   <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
@@ -95,8 +96,8 @@ export function PomodoroTimer() {
                     className={cn(
                       "h-10 rounded-xl border border-white/10 px-4",
                       state.mode === mode
-                        ? "bg-blue-500/85 text-white hover:bg-blue-400"
-                        : "bg-white/[0.04] text-zinc-100"
+                        ? "hub-accent-bg"
+                        : "hub-glass-control text-zinc-100"
                     )}
                   >
                     {pomodoroModeLabels[mode]}
@@ -116,7 +117,7 @@ export function PomodoroTimer() {
                         tone: "info",
                       })
                     }}
-                    className="h-11 rounded-xl bg-blue-500/85 text-white hover:bg-blue-400"
+                    className="h-11 rounded-xl"
                   >
                     <Pause className="size-4" aria-hidden="true" />
                     Pause
@@ -125,7 +126,7 @@ export function PomodoroTimer() {
                   <Button
                     type="button"
                     onClick={startTimer}
-                    className="h-11 rounded-xl bg-blue-500/85 text-white hover:bg-blue-400"
+                    className="h-11 rounded-xl"
                   >
                     <Play className="size-4" aria-hidden="true" />
                     {remainingSeconds === 0 ? "Start" : "Start"}
@@ -161,7 +162,7 @@ export function PomodoroTimer() {
 
               <div className="mt-6 h-3 w-full max-w-xl overflow-hidden rounded-full bg-white/[0.06]">
                 <div
-                  className="h-full rounded-full bg-blue-400 transition-all duration-500"
+                  className="h-full rounded-full bg-[var(--hub-accent)] transition-[width] duration-500 ease-out"
                   style={{ width: `${Math.round(progress * 100)}%` }}
                 />
               </div>
@@ -175,9 +176,9 @@ export function PomodoroTimer() {
               <CardTitle>Session Stats</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <div className="hub-glass-control rounded-2xl p-4">
                 <p className="text-sm text-zinc-500">Focus sessions completed</p>
-                <p className="mt-2 text-4xl font-semibold text-zinc-50">
+                <p className="mt-2 break-words text-3xl font-semibold text-zinc-50 sm:text-4xl">
                   {state.sessionCount}
                 </p>
               </div>
@@ -233,7 +234,7 @@ export function PomodoroTimer() {
               </Field>
               <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-zinc-200">
                 <span className="flex items-center gap-2">
-                  <Bell className="size-4 text-blue-300" aria-hidden="true" />
+                  <Bell className="size-4 text-[var(--hub-accent)]" aria-hidden="true" />
                   Browser notifications
                 </span>
                 <input
@@ -242,7 +243,7 @@ export function PomodoroTimer() {
                   onChange={(event) =>
                     updatePreferences({ notificationsEnabled: event.target.checked })
                   }
-                  className="size-4 accent-blue-500"
+                  className="size-4 accent-[var(--hub-accent)]"
                 />
               </label>
               <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-zinc-200">
@@ -253,7 +254,7 @@ export function PomodoroTimer() {
                   onChange={(event) =>
                     updatePreferences({ soundEnabled: event.target.checked })
                   }
-                  className="size-4 accent-blue-500"
+                  className="size-4 accent-[var(--hub-accent)]"
                 />
               </label>
               <Badge tone={state.isRunning ? "green" : "zinc"}>

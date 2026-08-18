@@ -144,7 +144,7 @@ export function HabitTracker() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="submit"
-                  className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+                  className="h-10 rounded-xl px-4"
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   {editingId ? "Save Changes" : "Add Habit"}
@@ -232,11 +232,11 @@ function HabitCard({
   return (
     <Card
       className={cn(
-        "transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40",
+        "transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]",
         completedToday && "border-emerald-400/30 bg-emerald-500/[0.055]"
       )}
     >
-      <CardContent className="pt-5">
+      <CardContent className="pt-4 sm:pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -245,12 +245,12 @@ function HabitCard({
                 style={{ backgroundColor: habit.color }}
                 aria-hidden="true"
               />
-              <h3 className="truncate text-base font-semibold text-zinc-50">
+              <h3 className="break-words text-base font-semibold text-zinc-50">
                 {habit.name}
               </h3>
             </div>
             {habit.description ? (
-              <p className="mt-2 text-sm leading-6 text-zinc-500">{habit.description}</p>
+              <p className="mt-2 break-words text-sm leading-6 text-zinc-500">{habit.description}</p>
             ) : null}
           </div>
           <Badge tone={completedToday ? "green" : "zinc"}>
@@ -264,7 +264,7 @@ function HabitCard({
           <ProgressMetric label="Monthly Progress" value={monthly} />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-1">
+        <div className="mt-4 flex flex-wrap gap-1.5">
           <Button
             type="button"
             onClick={onToggle}
@@ -272,7 +272,7 @@ function HabitCard({
               "h-10 rounded-xl px-4",
               completedToday
                 ? "bg-emerald-500/85 text-white hover:bg-emerald-400"
-                : "bg-blue-500/85 text-white hover:bg-blue-400"
+                : "hub-accent-bg"
             )}
           >
             <CheckCircle2 className="size-4" aria-hidden="true" />
@@ -311,7 +311,7 @@ function ProgressMetric({ label, value }: { label: string; value: number }) {
     <div>
       <Metric label={label} value={`${value}%`} />
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-        <div className="h-full rounded-full bg-blue-400" style={{ width: `${value}%` }} />
+        <div className="h-full rounded-full bg-[var(--hub-accent)]" style={{ width: `${value}%` }} />
       </div>
     </div>
   )
@@ -352,9 +352,9 @@ function getMonthlyProgress(habit: Habit) {
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
     <Card>
-      <CardContent className="pt-5">
+      <CardContent className="pt-4 sm:pt-5">
         <p className="text-sm text-zinc-500">{label}</p>
-        <p className="mt-2 text-3xl font-semibold text-zinc-50">{value}</p>
+        <p className="mt-2 break-words text-2xl font-semibold text-zinc-50 sm:text-3xl">{value}</p>
       </CardContent>
     </Card>
   )

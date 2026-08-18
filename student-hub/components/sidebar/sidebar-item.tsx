@@ -21,48 +21,33 @@ export function SidebarItem({ active, expanded, item, pinned }: SidebarItemProps
       aria-label={item.title}
       title={item.title}
       className={cn(
-        "group/navitem relative flex h-11 w-full items-center gap-3 rounded-xl px-2 text-zinc-500 outline-none transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.06] hover:text-zinc-100 hover:shadow-lg hover:shadow-black/20 focus-visible:bg-white/[0.06] focus-visible:text-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500/35",
+        "hub-focus relative flex h-11 w-full items-center justify-center rounded-2xl px-0 text-zinc-500 transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-zinc-100 hover:shadow-lg hover:shadow-black/20 focus-visible:bg-white/[0.08] focus-visible:text-zinc-100",
+        expanded && "lg:justify-start lg:gap-2.5 lg:px-2",
         active &&
-          "bg-blue-500/15 text-blue-300 shadow-lg shadow-blue-950/30 hover:bg-blue-500/20 hover:text-blue-200"
+          "border border-[var(--hub-accent-border)] bg-[var(--hub-accent-soft)] text-[var(--hub-accent)] shadow-lg shadow-[var(--hub-accent-glow)] hover:bg-[var(--hub-accent-muted)]"
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "absolute left-0 h-6 w-1 rounded-r-full bg-blue-400 opacity-0 transition duration-200",
+          "absolute left-0 h-6 w-0.5 rounded-r-full bg-[var(--hub-accent)] opacity-0 shadow-[0_0_14px_var(--hub-accent)] transition-opacity duration-200",
           active && "opacity-100"
         )}
       />
-      <span className="flex size-7 shrink-0 items-center justify-center">
+      <span className="flex size-8 shrink-0 items-center justify-center">
         <Icon className="size-5" aria-hidden="true" />
       </span>
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-sm font-medium transition duration-200",
-          expanded
-            ? "translate-x-0 opacity-100"
-            : "translate-x-1 opacity-0 group-hover/sidebar:translate-x-0 group-hover/sidebar:opacity-100"
-        )}
-      >
-        {item.title}
-      </span>
-      {pinned ? (
+      {expanded ? (
+        <span className="hidden min-w-0 flex-1 truncate text-sm font-medium lg:block">
+          {item.title}
+        </span>
+      ) : null}
+      {expanded && pinned ? (
         <Star
-          className={cn(
-            "size-3.5 shrink-0 fill-blue-300 text-blue-300 transition",
-            expanded ? "opacity-100" : "opacity-0 group-hover/sidebar:opacity-100"
-          )}
+          className="hidden size-3.5 shrink-0 fill-[var(--hub-accent)] text-[var(--hub-accent)] lg:block"
           aria-hidden="true"
         />
       ) : null}
-      <span
-        className={cn(
-          "pointer-events-none absolute left-14 z-50 whitespace-nowrap rounded-lg border border-white/10 bg-[#111827] px-2.5 py-1.5 text-xs font-medium text-zinc-100 opacity-0 shadow-xl shadow-black/30 transition group-focus-visible/navitem:opacity-100",
-          expanded && "hidden"
-        )}
-      >
-        {item.title}
-      </span>
     </Link>
   )
 }

@@ -178,7 +178,7 @@ export function GradesTracker() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="submit"
-                  className="h-10 rounded-xl bg-blue-500/85 px-4 text-white hover:bg-blue-400"
+                  className="h-10 rounded-xl px-4"
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   {editingId ? "Save Changes" : "Add Subject"}
@@ -217,12 +217,12 @@ export function GradesTracker() {
               {subjects.map((subject) => (
                 <Card
                   key={subject.id}
-                  className="transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40"
+                  className="transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--hub-accent-border)]"
                 >
-                  <CardContent className="pt-5">
+                  <CardContent className="pt-4 sm:pt-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h3 className="truncate text-base font-semibold text-zinc-50">
+                        <h3 className="break-words text-base font-semibold text-zinc-50">
                           {subject.subjectName}
                         </h3>
                         <p className="mt-1 text-sm text-zinc-500">
@@ -237,7 +237,7 @@ export function GradesTracker() {
                       <GradeRow label="Midterm" value={subject.midtermGrade} />
                       <GradeRow label="Final" value={subject.finalGrade} />
                     </div>
-                    <div className="mt-4 flex gap-1">
+                    <div className="mt-4 flex gap-1.5">
                       <Button
                         type="button"
                         variant="ghost"
@@ -307,9 +307,9 @@ function GradeRow({ label, value }: { label: string; value: number }) {
 function StatCard({ label, value }: { label: number | string; value: number | string }) {
   return (
     <Card>
-      <CardContent className="pt-5">
+      <CardContent className="pt-4 sm:pt-5">
         <p className="text-sm text-zinc-500">{label}</p>
-        <p className="mt-2 text-3xl font-semibold text-zinc-50">{value}</p>
+        <p className="mt-2 break-words text-2xl font-semibold text-zinc-50 sm:text-3xl">{value}</p>
       </CardContent>
     </Card>
   )
