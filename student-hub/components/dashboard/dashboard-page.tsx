@@ -149,7 +149,6 @@ export function DashboardPage() {
   const { schedules } = useSchedule()
   const [now, setNow] = useState<Date | null>(null)
   const [maximizedWidgetId, setMaximizedWidgetId] = useState<string | null>(null)
-  const maximizedCloseButtonRef = useRef<HTMLButtonElement | null>(null)
   const [dashboardGridElement, setDashboardGridElement] = useState<HTMLElement | null>(null)
   const gridColumns = useDashboardColumns()
   const gridLayoutKey = dashboardLayout.visibleWidgets
@@ -171,37 +170,6 @@ export function DashboardPage() {
       window.clearInterval(interval)
     }
   }, [])
-
-  useEffect(() => {
-    if (!maximizedWidgetId) {
-      return
-    }
-
-    const previousOverflow = document.body.style.overflow
-    const previousFocus =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null
-    const focusFrame = window.requestAnimationFrame(() => {
-      maximizedCloseButtonRef.current?.focus()
-    })
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMaximizedWidgetId(null)
-      }
-    }
-
-    document.body.style.overflow = "hidden"
-    document.addEventListener("keydown", closeOnEscape)
-
-    return () => {
-      window.cancelAnimationFrame(focusFrame)
-      document.body.style.overflow = previousOverflow
-      document.removeEventListener("keydown", closeOnEscape)
-      previousFocus?.focus()
-    }
-  }, [maximizedWidgetId])
 
   const activeAssignments = useMemo(
     () =>
@@ -253,7 +221,7 @@ export function DashboardPage() {
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--hub-muted-text)] sm:text-base">
               Your classes, deadlines, notes, timer, and AI workspace are arranged as
-              customizable glass widgets.
+              widgets.
             </p>
           </div>
           <div className="grid gap-3">
@@ -318,17 +286,7 @@ export function DashboardPage() {
       />
 
       {maximizedWidget ? (
-        <div
-          role="dialog"
-          aria-label={`${DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].title} maximized widget`}
-          aria-modal="true"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setMaximizedWidgetId(null)
-            }
-          }}
-          className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4 backdrop-blur"
-        >
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4 backdrop-blur">
           <div className="w-full max-w-5xl">
             <DashboardCard
               title={DASHBOARD_WIDGET_DEFINITIONS[maximizedWidget.kind].title}
@@ -339,7 +297,6 @@ export function DashboardPage() {
               icon={widgetIcons[maximizedWidget.kind]}
               actions={
                 <Button
-                  ref={maximizedCloseButtonRef}
                   type="button"
                   variant="ghost"
                   size="icon-lg"
@@ -502,10 +459,10 @@ const resizeZones: Array<{
   { direction: "s", className: "bottom-0 left-3 right-3 h-2" },
   { direction: "e", className: "bottom-3 right-0 top-3 w-2" },
   { direction: "w", className: "bottom-3 left-0 top-3 w-2" },
-  { direction: "nw", className: "left-0 top-0 size-2.5" },
-  { direction: "ne", className: "right-0 top-0 size-2.5" },
-  { direction: "sw", className: "bottom-0 left-0 size-2.5" },
-  { direction: "se", className: "bottom-0 right-0 size-2.5" },
+  { direction: "nw", className: "left-0 top-0 size-3" },
+  { direction: "ne", className: "right-0 top-0 size-3" },
+  { direction: "sw", className: "bottom-0 left-0 size-3" },
+  { direction: "se", className: "bottom-0 right-0 size-3" },
 ]
 
 function WidgetResizeZones({
@@ -561,8 +518,7 @@ function DashboardWidgetSettingsPopover({
 
         return (
           <HubPopoverContent
-            align="start"
-            positionerClassName="z-[80]"
+            positionerClassName="z-[65]"
             popupProps={{
               "data-no-drag": true,
               "data-widget-settings-popup": widget.id,
@@ -637,15 +593,15 @@ function DashboardWidgetSettingsContent({
       </div>
 
       <Field label="Widget Size">
-        <div className="grid grid-cols-4 gap-1.5">
-          {(["small", "medium", "large", "custom"] as DashboardWidgetSize[]).map((size) => (
+        <div className="grid grid-cols-3 gap-2">
+          {(["small", "medium", "large"] as DashboardWidgetSize[]).map((size) => (
             <Button
               key={size}
               type="button"
               variant={widget.size === size ? "default" : "ghost"}
               onClick={() => setSize(size)}
               className={cn(
-                "h-9 min-w-0 rounded-xl px-1.5 text-xs capitalize",
+                "h-9 rounded-xl px-2 capitalize",
                 widget.size === size
                   ? "hub-accent-bg"
                   : "hub-glass-control text-zinc-200"
