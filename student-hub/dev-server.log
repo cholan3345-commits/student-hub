@@ -34,3 +34,4 @@ Creating turbopack project {
  GET /profile 200 in 159ms (next.js: 58ms, application-code: 101ms)
  GET /settings 200 in 171ms (next.js: 60ms, application-code: 111ms)
  GET / 200 in 149ms (next.js: 10ms, application-code: 139ms)
+ GET / 200 in 288ms (next.js: 18ms, application-code: 269ms)
