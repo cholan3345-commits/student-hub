@@ -6,7 +6,11 @@ const TOP_REVEAL_OFFSET = 24
 const HIDE_DIRECTION_DISTANCE = 14
 const SHOW_DIRECTION_DISTANCE = 10
 
-export function useAutoHideNavbar(enabled: boolean, forceVisible = false) {
+export function useAutoHideNavbar(
+  enabled: boolean,
+  forceVisible = false,
+  resetKey?: string | null
+) {
   const [directionVisible, setDirectionVisible] = useState(true)
   const visibleRef = useRef(true)
 
@@ -92,12 +96,10 @@ export function useAutoHideNavbar(enabled: boolean, forceVisible = false) {
       animationFrame = window.requestAnimationFrame(updateFromScroll)
     }
 
-    if (forceVisible || lastScrollTop <= TOP_REVEAL_OFFSET) {
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = 0
-        setVisible(true)
-      })
-    }
+    animationFrame = window.requestAnimationFrame(() => {
+      animationFrame = 0
+      setVisible(true)
+    })
 
     window.addEventListener("scroll", handleScroll, { passive: true })
 
@@ -107,7 +109,7 @@ export function useAutoHideNavbar(enabled: boolean, forceVisible = false) {
         window.cancelAnimationFrame(animationFrame)
       }
     }
-  }, [enabled, forceVisible])
+  }, [enabled, forceVisible, resetKey])
 
   return enabled ? directionVisible : true
 }

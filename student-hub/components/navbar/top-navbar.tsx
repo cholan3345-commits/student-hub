@@ -80,7 +80,7 @@ export function TopNavbar() {
     useStudentNotifications(assignments, schedules)
   const [query, setQuery] = useState("")
   const [headerPopoverOpen, setHeaderPopoverOpen] = useState(false)
-  const navbarVisible = useAutoHideNavbar(pathname === "/", headerPopoverOpen)
+  const navbarVisible = useAutoHideNavbar(true, headerPopoverOpen, pathname)
   const profileInitials = getProfileInitials(profile)
 
   const results = useMemo(() => {
