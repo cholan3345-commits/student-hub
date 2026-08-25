@@ -349,3 +349,29 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+html,
+body,
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-color: transparent transparent !important;
+  scrollbar-width: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+html::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}

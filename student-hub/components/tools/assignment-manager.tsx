@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/toast"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { compareDateKeys, formatDateLabel, getDateKey, isPastDate } from "@/lib/date"
+import { getUniqueSubjects, isSameSubject, normalizeSubject } from "@/lib/subjects"
 import {
   ASSIGNMENT_PRIORITIES,
   ASSIGNMENT_STATUSES,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useAssignments, type AssignmentInput } from "@/hooks/use-assignments"
+import { useSchedule } from "@/hooks/use-schedule"
 
 const emptyAssignment: AssignmentInput = {
   description: "",
@@ -53,6 +55,7 @@ export function AssignmentManager() {
     toggleAssignmentComplete,
     updateAssignment,
   } = useAssignments()
+  const { schedules } = useSchedule()
   const { toast } = useToast()
   const [draft, setDraft] = useState<AssignmentInput>(emptyAssignment)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -61,9 +64,16 @@ export function AssignmentManager() {
   const [priorityFilter, setPriorityFilter] = useState<"All" | AssignmentPriority>("All")
   const [statusFilter, setStatusFilter] = useState<"All" | AssignmentStatus>("All")
 
-  const subjects = useMemo(
-    () =>
-      Array.from(new Set(assignments.map((item) => item.subject).filter(Boolean))).sort(),
+  const scheduledSubjects = useMemo(
+    () => getUniqueSubjects(schedules.map((item) => item.subject)),
+    [schedules]
+  )
+  const selectableSubjects = useMemo(
+    () => getUniqueSubjects([...scheduledSubjects, draft.subject]),
+    [draft.subject, scheduledSubjects]
+  )
+  const assignmentSubjects = useMemo(
+    () => getUniqueSubjects(assignments.map((item) => item.subject)),
     [assignments]
   )
 
@@ -79,7 +89,7 @@ export function AssignmentManager() {
             .toLowerCase()
             .includes(search)
         const matchesSubject =
-          subjectFilter === "All" || item.subject === subjectFilter
+          subjectFilter === "All" || isSameSubject(item.subject, subjectFilter)
         const matchesPriority =
           priorityFilter === "All" || item.priority === priorityFilter
         const matchesStatus = statusFilter === "All" || item.status === statusFilter
@@ -123,6 +133,7 @@ export function AssignmentManager() {
     const nextDraft = {
       ...draft,
       progress: Math.min(100, Math.max(0, Number(draft.progress) || 0)),
+      subject: normalizeSubject(draft.subject),
     }
 
     if (editingId) {
@@ -168,13 +179,24 @@ export function AssignmentManager() {
                 />
               </Field>
               <Field label="Subject">
-                <Input
+                <Select
                   value={draft.subject}
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, subject: event.target.value }))
                   }
-                  placeholder="Biology"
-                />
+                  disabled={selectableSubjects.length === 0}
+                >
+                  <option value="">
+                    {selectableSubjects.length === 0
+                      ? "Add subjects in Schedule first"
+                      : "Select subject"}
+                  </option>
+                  {selectableSubjects.map((subject) => (
+                    <option key={subject} value={subject}>
+                      {subject}
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label="Description">
                 <Textarea
@@ -305,7 +327,7 @@ export function AssignmentManager() {
                   aria-label="Filter by subject"
                 >
                   <option value="All">All subjects</option>
-                  {subjects.map((subject) => (
+                  {assignmentSubjects.map((subject) => (
                     <option key={subject} value={subject}>
                       {subject}
                     </option>

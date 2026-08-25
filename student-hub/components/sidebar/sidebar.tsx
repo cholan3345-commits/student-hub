@@ -46,7 +46,7 @@ export function Sidebar() {
       <nav
         aria-label="Student Hub tools"
         className={cn(
-          "flex h-full flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-2 py-3 scrollbar-thin",
+          "flex h-full flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-2 py-3",
           expanded && "lg:px-3"
         )}
       >

@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/toast"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { compareTimes, formatTime, getWeekday } from "@/lib/date"
+import { getUniqueSubjects, isSameSubject, normalizeSubject } from "@/lib/subjects"
 import { WEEKDAYS, type ScheduleItem, type Weekday } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useSchedule, type ScheduleInput } from "@/hooks/use-schedule"
@@ -54,7 +55,7 @@ export function ScheduleManager() {
   const today = getWeekday()
 
   const subjects = useMemo(
-    () => Array.from(new Set(schedules.map((item) => item.subject).filter(Boolean))).sort(),
+    () => getUniqueSubjects(schedules.map((item) => item.subject)),
     [schedules]
   )
 
@@ -79,7 +80,7 @@ export function ScheduleManager() {
             .includes(search)
         const matchesDay = dayFilter === "All" || item.day === dayFilter
         const matchesSubject =
-          subjectFilter === "All" || item.subject === subjectFilter
+          subjectFilter === "All" || isSameSubject(item.subject, subjectFilter)
 
         return matchesQuery && matchesDay && matchesSubject
       })
@@ -108,7 +109,12 @@ export function ScheduleManager() {
   function submitSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!draft.subject.trim()) {
+    const nextDraft = {
+      ...draft,
+      subject: normalizeSubject(draft.subject),
+    }
+
+    if (!nextDraft.subject) {
       toast({
         message: "Add a subject before saving this class.",
         title: "Subject required",
@@ -118,14 +124,14 @@ export function ScheduleManager() {
     }
 
     if (editingId) {
-      updateSchedule(editingId, draft)
+      updateSchedule(editingId, nextDraft)
       toast({
         message: "Your schedule item was updated.",
         title: "Schedule saved",
         tone: "success",
       })
     } else {
-      addSchedule(draft)
+      addSchedule(nextDraft)
       toast({
         message: "A new class was added to your schedule.",
         title: "Schedule added",
